@@ -14,8 +14,11 @@ The [instructions on setting up the Matrix Portal S3](https://learn.adafruit.com
 * "Install CircuitPython 10.0.0 UF2 Only"
 * Continue following install instructions
 
+Currently using `adafruit-circuitpython-matrixportal_m4-en_US-10.0.0`
+
 ### Install Adafruit Library
 Downloaded 10.x bundle from https://circuitpython.org/libraries and just installed entire `lib` directory from the bundle into the `lib` directory on the device. There is a lot more in that lib that we don't need but it is only 1MB so it isn't worth it to figure out what we do/don't need.
 
 Documentation: https://docs.circuitpython.org/projects/matrixportal/en/latest/
 
+Currently using `adafruit-circuitpython-bundle-10.x-mpy-20251004`
