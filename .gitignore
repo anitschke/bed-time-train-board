@@ -1,0 +1,10 @@
+.fseventsd/
+lib/
+sd/
+.metadata_never_index
+.Trash-1000
+.Trashes
+boot_out.txt
+
+# settings.toml contains secrets and so should not be checked in
+settings.toml
