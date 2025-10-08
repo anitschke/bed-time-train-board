@@ -178,7 +178,7 @@ matrixPortal.add_text( text_font=ARRIVAL_TIMES_FONT, text_position=(16, 27), tex
 last_check = None
 
 while True:
-    if last_check is None or time.monotonic() > last_check + 180:
+    if last_check is None or time.monotonic() > last_check + 180: #xxx check more frequently
         try:
             value = matrixPortal.fetch()
             print_debug("Response is:", value)
