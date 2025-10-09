@@ -149,9 +149,8 @@ def transform_json(schedule_json):
 matrixPortal = MatrixPortal(url=DATA_SOURCE, debug=DEBUG, json_path=DATA_LOCATION)
 
 # xxx doc sync current time
-# xxx add debugging output 
-# xxx doc need to sue location parameter since we have to remove timezone data from timestamps in order to process them
-matrixPortal.network.get_local_time(location="Etc/UTC")
+# xxx is there any time float, I should probably update the time every once in a while.
+matrixPortal.network.get_local_time(location="America/New_York")
 
 # The MBTA API responds with a content type header of
 # "application/vnd.api+json". When the matrix portal looks at the response from
