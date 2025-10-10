@@ -14,8 +14,6 @@ import gc
 
 #xxx remove unused imports
 
-#xxx I feel like I am getting too many results saying that trains are ariving way more frequently then they probably are
-
 #xxx read through https://www.mbta.com/developers/v3-api/best-practices#predictions to see if you are getting it right
 
 # xxx see if you can use sparce fieldsets to request less data: https://www.mbta.com/developers/v3-api/best-practices#sparse-fieldsets
@@ -42,7 +40,21 @@ import gc
 #
 #
 
-# xxx get an API get to control versioning: https://www.mbta.com/developers/v3-api/versioning
+# xxx The https://api-v3.mbta.com/vehicles API will also give us "live" (seems
+# like it updates every 10s or so) data on vehicles such as lat/lon, speed,
+# state enum (stopped, boarding, moving, ...), and so on. If the /predictions
+# API doesn't give us fine grained enough data to determine exactly when trains
+# will arrive we could always switch over to using the /vehicles API when trains
+# are getting close in order to build our own prediction about when the train
+# will pass by.
+#
+# The data on the vehicle for a prediction for a schedule is also available when
+# we request
+# https://api-v3.mbta.com/schedules?filter%5Bstop%5D=place-FB-0275&filter%5Broute%5D=CR-Franklin&sort=arrival_time&include=prediction
+# by asking for it in the include query parameter:
+# https://api-v3.mbta.com/schedules?filter%5Bstop%5D=place-FB-0275&filter%5Broute%5D=CR-Franklin&sort=arrival_time&include=prediction.vehicles
+
+# xxx get an API key get to control versioning: https://www.mbta.com/developers/v3-api/versioning
 
 # xxx this api is pretty good but it has some issues:
 # 
