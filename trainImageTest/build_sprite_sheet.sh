@@ -90,6 +90,12 @@ magick -size ${WIDTH}x${HEIGHT} xc:black "$FINAL_BLACK_FRAME"
 echo "Deleting padded version before building the final sprite sheet"
 rm "$PADDED"
 
+# xxx There is something in here that we should be able to do to produce a
+# smaller image size. If I just open the generated .bmp in GIMP and then resave
+# it then I get something about half the size. So need to look into what other
+# options I have to make it smaller since we are starting to get close to
+# filling up the flash memory on the board.
+
 echo "Stacking frames vertically into $OUTPUT..."
 magick convert -type Palette -append "$TMPDIR"/*.bmp "$OUTPUT"
 magick -delay 5 -loop 0 -dispose Background -background black "$TMPDIR"/*.bmp "$GIF_OUTPUT"
