@@ -6,6 +6,8 @@
 INPUT="trainSrc.bmp"
 SMOKE_SPRITE_SHEET="smokeSpriteSrc.bmp"
 OUTPUT="train.bmp"
+GIF_OUTPUT="train.gif"
+GIF_OUTPUT_SCALED="trainScaled.gif"
 WIDTH=64
 HEIGHT=32
 
@@ -90,6 +92,8 @@ rm "$PADDED"
 
 echo "Stacking frames vertically into $OUTPUT..."
 magick convert -type Palette -append "$TMPDIR"/*.bmp "$OUTPUT"
+magick -delay 5 -loop 0 -dispose Background -background black "$TMPDIR"/*.bmp "$GIF_OUTPUT"
+magick -delay 5 -loop 0 -dispose Background -background black "$TMPDIR"/*.bmp -filter point -scale $((WIDTH * 8))x$((HEIGHT * 8)) "$GIF_OUTPUT_SCALED"
 
 # Clean up
 rm -rf "$TMPDIR"
