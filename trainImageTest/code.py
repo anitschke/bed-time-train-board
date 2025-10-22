@@ -39,6 +39,7 @@ sprite = displayio.TileGrid(
     tile_width=WIDTH,
     tile_height=HEIGHT,
 )
+sprite.flip_x = True
 
 sprite_group.append(sprite)
 
