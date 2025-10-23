@@ -11,6 +11,7 @@ from adafruit_datetime import datetime, timedelta
 import adafruit_ntp
 import json
 import gc
+import displayio
 
 #xxx remove unused imports
 
@@ -106,6 +107,12 @@ DEBUG=True
 
 ARRIVAL_TIMES_FONT='fonts/6x10.bdf'
 
+# xxx doc
+# xxx these should match up with the MBTA APIS, double check that they do
+class Direction:
+    IN_BOUND = 1
+    OUT_BOUND = 0
+
 #xxx doc
 DATA_LOCATION = [
      ["times", 0],
@@ -144,99 +151,7 @@ def get_arrival_in_minutes_from_now(now, date_str):
         return f"{time_in_hours}h {extra_minutes}min"
 
 # xxx doc
-def transform_json(schedule_json):
-    gc.collect()
-    times = []
-    included = {item["id"]: item for item in schedule_json.get("included", [])}
 
-    # xxx this logic could probably be improved some depending on how accurate
-    # we want to try to get the board:
-    # 
-    # 1. We want to predict the time that the train passes the children's
-    #    museum, not when it arrives at the station. So instead of just looking
-    #    at the station arrival_time or departure_time we should probably look
-    #    at the "direction" of the train and add some offset to either the
-    #    arrival_time or departure_time based on what direction it is going.
-    #
-    # 2. with regards to null arrival times and departure times
-    #    https://www.mbta.com/developers/v3-api/best-practices says:
-    # 
-    #       The departure time is present if, and only if, it's possible for
-    #       riders to board the associated vehicle at the associated stop. A
-    #       null departure time is typically seen at the last stop on a trip.
-    #  
-    #       The arrival time is present if, and only if, it's possible for
-    #       riders to alight from the associated vehicle at the associated stop.
-    #       A null arrival time is typically seen at the first stop on a trip.
-    #  
-    #       In general, we recommend not displaying predictions with null
-    #       departure times, since riders will not be able to board the vehicle.
-    #       If both arrival and departure time are present, the arrival time is
-    #       likely to be more useful to riders.
-    #
-    #    We don't really care about the "can a customer board or not" but I do
-    #    sometimes see some null values in the schedule. I think we need to
-    #    consider the above logic in how we calculate when the train will pass
-    #    by.
- 
-    # Build times list
-    for item in schedule_json.get("data", []):
-        prediction_ref = item.get("relationships", {}).get("prediction", {}).get("data")
-        prediction_time = None
-
-        # Prefer prediction if available
-        if prediction_ref and prediction_ref.get("id") in included:
-            pred = included[prediction_ref["id"]]["attributes"]
-            prediction_time = pred.get("arrival_time") or pred.get("departure_time")
-
-        # Fallback to schedule times if prediction missing
-        schedule_attrs = item.get("attributes", {})
-        schedule_time = (
-            schedule_attrs.get("arrival_time")
-            or schedule_attrs.get("departure_time")
-        )
-
-        time_str = prediction_time or schedule_time
-        if time_str:
-            times.append(time_str)
-
-    # Sort the list
-    times.sort()
-    print_debug("times:", times)
-
-    # Remove any times more than 2 minutes ago When we do this we need to make
-    # sure we remove any time zone information or else we get "CircuitPython
-    # does not currently implement time.gmtime" errors.
-    now = datetime.now()
-    print_debug("now:", now)
-    times = [t for t in times if (datetime.fromisoformat(t).replace(tzinfo=None) - now).total_seconds() >= -120.0]
-    print_debug("filtered times:", times)
-
-    # We only need three times as we only display that many on the board. So we
-    # will trim or pad the array so we always have three values:
-    while len(times) < 3:
-        times.append(None)
-    times = times[:3]
-    print_debug("filtered times:", times)
-
-    # Now transform them into nice user readable times
-    readable_times = [get_arrival_in_minutes_from_now(now, t) for t in times]
-    print_debug("readable_times:", times)
-
-
-    # matrix portal expects that we transform the json by modifying the dict
-    # that we are passed. So instead of returning something we will clear the
-    # dict and then populate with the times. We only need to populate in three
-    # of these times since we only show at most three times on the board.
-    schedule_json.clear()
-    schedule_json["times"] = readable_times
-
-    print_debug("transformed json:", schedule_json)
-
-    # Cleanup
-    del times
-    del included
-    gc.collect()
 
 # xxx set the status led
 matrixPortal = MatrixPortal(url=DATA_SOURCE, debug=DEBUG, json_path=DATA_LOCATION)
@@ -244,16 +159,6 @@ matrixPortal = MatrixPortal(url=DATA_SOURCE, debug=DEBUG, json_path=DATA_LOCATIO
 # xxx doc sync current time
 # xxx is there any time float, I should probably update the time every once in a while.
 matrixPortal.network.get_local_time(location="America/New_York")
-
-# The MBTA API responds with a content type header of
-# "application/vnd.api+json". When the matrix portal looks at the response from
-# this API it looks at the content type header to decide if it can use the
-# json_path provided to parse the response. But the matrix portal doesn't have
-# "application/vnd.api+json" in it's list of default json content types so we
-# need to add that in order for it to correctly recognize the response as json
-# and then parse it. see
-# https://github.com/adafruit/Adafruit_CircuitPython_PortalBase/blob/d5c51a1838c3aec4d5fbfafb9f09cf62c528d58b/adafruit_portalbase/network.py#L104
-matrixPortal.network.add_json_content_type("application/vnd.api+json")
 
 # xxx doc
 matrixPortal.network.add_json_transform(transform_json)
@@ -280,21 +185,24 @@ while True:
     matrixPortal.scroll()
     time.sleep(0.03)
 
+
 class DisplayMode:
     ARRIVAL_TIMES = 1
+    TRAIN = 2
 
 # xxx doc
 # xxx test
 class Display:
-    def __init__(self, matrix_portal, text_scroll_delay):
+    def __init__(self, matrix_portal, text_scroll_delay, train_frame_duration):
         self._matrix_portal = matrix_portal
         self._mode = None
         self._text_scroll_delay = text_scroll_delay
+        self._train_frame_duration = train_frame_duration
         
         self._arrival_time_indices = None
     
     def render_arrival_times(self, times):
-        if self.mode != DisplayMode.ARRIVAL_TIMES:
+        if self._mode != DisplayMode.ARRIVAL_TIMES:
             self._initialize_arrival_times()
         self._matrix_portal.set_text(times[0], self._arrival_time_indices[0])
         self._matrix_portal.set_text(times[1], self._arrival_time_indices[1])
@@ -314,3 +222,55 @@ class Display:
 
     def scroll_text(self):
         self._matrix_portal.scroll_text(self._text_scroll_delay)
+
+    def render_train(self, direction):
+        self._mode = DisplayMode.TRAIN
+        self._render_train(direction)
+
+        # After we have rendered the train replace the root group to make sure
+        # we remove any existing train animation and then run the GC to free up
+        # all the memory from the animation.
+        self._matrix_portal.root_group = displayio.Group()
+        gc.collect()
+    
+    def _render_train(self, direction):
+        self._matrix_portal.remove_all_text()
+
+        # Now that wae have removed all text replace the root group to make sure
+        # there is nothing else being displayed.
+        self._matrix_portal.root_group = displayio.Group()
+        gc.collect()
+
+        WIDTH=64
+        HEIGHT=32
+
+        matrix = Matrix(bit_depth=4)
+        sprite_group = displayio.Group()
+        matrix.display.root_group = sprite_group
+
+        bitmap = displayio.OnDiskBitmap('/train.bmp')
+        sprite = displayio.TileGrid(
+            bitmap,
+            pixel_shader=bitmap.pixel_shader,
+            tile_width=WIDTH,
+            tile_height=HEIGHT,
+        )
+
+        # The train animation is setup for an outbound train by default. So if
+        # we want to render an inbound train we need to flip the sprite
+        if (direction == Direction.IN_BOUND):
+            sprite.flip_x = True
+
+        self._matrix_portal.root_group.append(sprite)
+
+        frame_count = int(bitmap.height / HEIGHT)
+        current_frame = 0
+        while True:
+            time.sleep(self._train_frame_duration)
+            current_frame = current_frame + 1
+            if current_frame >= frame_count:
+                return
+
+            # Advance to the next frame by using __setitem__ on the
+            # sprite_group.
+            sprite_group[0][0] = current_frame
