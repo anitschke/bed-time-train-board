@@ -1,0 +1,82 @@
+{
+  "data": [
+    {
+      "attributes": {
+        "arrival_time": "2025-10-22T05:06:00-04:00",
+        "departure_time": "2025-10-22T05:06:00-04:00",
+        "direction_id": 1,
+        "drop_off_type": 0,
+        "pickup_type": 0,
+        "stop_headsign": "South Station via Back Bay",
+        "stop_sequence": 10,
+        "timepoint": true
+      },
+      "id": "schedule-Sept8Read-768347-704-FB-0275-S-10",
+      "relationships": {
+        "prediction": {
+          "data": null
+        },
+        "route": {
+          "data": {
+            "id": "CR-Franklin",
+            "type": "route"
+          }
+        },
+        "stop": {
+          "data": {
+            "id": "FB-0275-S",
+            "type": "stop"
+          }
+        },
+        "trip": {
+          "data": {
+            "id": "Sept8Read-768347-704",
+            "type": "trip"
+          }
+        }
+      },
+      "type": "schedule"
+    },
+    {
+      "attributes": {
+        "arrival_time": "2025-10-22T06:06:00-04:00",
+        "departure_time": "2025-10-22T06:06:00-04:00",
+        "direction_id": 0,
+        "drop_off_type": 0,
+        "pickup_type": 0,
+        "stop_headsign": null,
+        "stop_sequence": 10,
+        "timepoint": true
+      },
+      "id": "schedule-Sept8Read-768333-710-FB-0275-S-10",
+      "relationships": {
+        "prediction": {
+          "data": null
+        },
+        "route": {
+          "data": {
+            "id": "CR-Franklin",
+            "type": "route"
+          }
+        },
+        "stop": {
+          "data": {
+            "id": "FB-0275-S",
+            "type": "stop"
+          }
+        },
+        "trip": {
+          "data": {
+            "id": "Sept8Read-768333-710",
+            "type": "trip"
+          }
+        }
+      },
+      "type": "schedule"
+    }
+  ],
+  "included": [],
+  "jsonapi": {
+    "version": "1.0"
+  }
+}

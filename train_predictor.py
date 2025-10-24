@@ -11,10 +11,13 @@ class TrainArrival:
         return train.time      
 
 class TrainPredictor:
-    def __init__(self, network, datetime, nowFcn):
+    def __init__(self, network, datetime, nowFcn, filterResultsAfterSeconds = 120):
         self._network = network
+
         self._datetime = datetime
         self._nowFcn = nowFcn
+
+        self._filterResultsAfterSeconds = filterResultsAfterSeconds
     
         # The MBTA API responds with a content type header of
         # "application/vnd.api+json". When the matrix portal looks at the
@@ -105,12 +108,13 @@ class TrainPredictor:
         # xxxxxxxxxxx figure out how to turn print_debug back on in tests
         # print_debug("times:", times) 
 
-        # Remove any times more than 2 minutes ago When we do this we need to make
-        # sure we remove any time zone information or else we get "CircuitPython
-        # does not currently implement time.gmtime" errors.
+        # Remove any times more than self._filterResultsAfterSeconds (by default
+        # 2 minutes ago). When we do this we need to make sure we remove any
+        # time zone information or else we get "CircuitPython does not currently
+        # implement time.gmtime" errors.
         now = self._nowFcn()
         # print_debug("now:", now)
-        trains = [t for t in trains if (self._datetime.fromisoformat(t.time).replace(tzinfo=None) - now).total_seconds() >= -120.0]
+        trains = [t for t in trains if (self._datetime.fromisoformat(t.time).replace(tzinfo=None) - now).total_seconds() >= (-1 * self._filterResultsAfterSeconds)]
         # print_debug("filtered trains:", trains)
 
         # We only need "count" times as we only display that many on the board. So we
