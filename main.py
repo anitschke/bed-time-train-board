@@ -57,8 +57,8 @@ matrixPortal.network.get_local_time(location="America/New_York")
 
 last_check = None
 
+trains = [None, None, None]
 while True:
-    trains = [None, None, None]
     if last_check is None or time.monotonic() > last_check + 180: #xxx check more frequently
         try:
             trains = train_predictor.next_trains(count = 3)
@@ -66,7 +66,10 @@ while True:
         except (ValueError, RuntimeError) as e:
             print("Some error occured, retrying! -", e)
     
-    display.render_arrival_times(trains)
-    display.scroll_text()
+    if trains[0] is not None and time_conversion.time_is_soon(trains[0].time):
+        display.render_train(trains[0].direction)
+    else:
+        display.render_arrival_times(trains)
+        display.scroll_text()
 
 

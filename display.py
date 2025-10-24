@@ -42,6 +42,8 @@ class Display:
 
     def _initialize_arrival_times(self):
         self._matrix_portal.remove_all_text()
+        
+        self._matrix_portal.set_background('/background.bmp')
         self._matrix_portal.add_text( text_font=ARRIVAL_TIMES_FONT, text_position=(15, 3), text="Children's Museum of Franklin", is_data=False, scrolling=True)
         
         self._arrival_time_indices = [

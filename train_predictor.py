@@ -124,7 +124,8 @@ class TrainPredictor:
     def _fetch_schedules_and_predictions(self):
         # xxx move DATA_SOURCE into TrainPredictor?
         # xxx what do I want for a timeout here?
-        return self._network.fetch(DATA_SOURCE, timeout=10)
+        response = self._network.fetch(DATA_SOURCE, timeout=10)
+        return response.json()
     
     def _analyze_data(self, count, schedule_json):
         gc.collect()

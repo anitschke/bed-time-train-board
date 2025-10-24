@@ -9,6 +9,15 @@ class TimeConversion:
         self._nowFcn = nowFcn
 
     # xxx doc
+    # xxx test
+    # xxx add way to configure
+    def time_is_soon(self, time_str):
+        now = self._nowFcn()
+        train_date = self._datetime.fromisoformat(time_str).replace(tzinfo=None) # Remove tzinfo to be able to diff dates # xxx is this really needed?
+        time_in_seconds = (train_date-now).total_seconds()
+        return time_in_seconds < 30
+
+    # xxx doc
     def relative_time_from_now(self, time_str):
 
         # When we look at times we need to make sure we remove any time zone
