@@ -60,33 +60,6 @@ def print_debug(*args):
     if DEBUG:
         print(*args, sep="\n")
 
-# xxx doc 
-def get_arrival_in_minutes_from_now(now, date_str):
-    
-    # xxx if we weren't able to get any data then we get a none type. To avoid issues with parsing we will check and just return empty
-    if date_str is None:
-         return ""
-
-    # When we look at times we need to make sure we remove any time zone
-    # information or else we get "CircuitPython does not currently implement
-    # time.gmtime" errors.
-    train_date = datetime.fromisoformat(date_str).replace(tzinfo=None) # Remove tzinfo to be able to diff dates # xxx is this really needed?
-    time_in_minutes = round((train_date-now).total_seconds()/60.0)
-
-    if time_in_minutes <= 1:
-        return "Arriving"
-    if time_in_minutes < 60:
-        return  f"{time_in_minutes}min"
-    
-    time_in_hours = round(time_in_minutes/60.0)
-    extra_minutes = time_in_minutes % 60
-    if extra_minutes == 0:
-        return f"{time_in_hours}h"
-    else:
-        return f"{time_in_hours}h {extra_minutes}min"
-
-# xxx doc
-
 
 # xxx set the status led
 matrixPortal = MatrixPortal(url=DATA_SOURCE, debug=DEBUG, json_path=DATA_LOCATION)
