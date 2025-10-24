@@ -1,8 +1,9 @@
-from train_predictor import TrainPredictor
+from train_predictor import TrainPredictor, Direction
 from datetime import datetime
 import json
 import os
 import unittest
+import urllib.request
 
 
 def mock_now_func(timeOfNow):
@@ -13,6 +14,59 @@ def load_test_schedule_json(file):
     file_path = os.path.join(current_file_directory, 'testdata', 'schedules', file)
     with open(file_path, 'r') as file:
         return json.load(file)
+
+class MockNetwork:
+    def add_json_content_type(self, type):
+        return
+    def fetch(self, url, timeout=30):
+        with urllib.request.urlopen(url) as response:
+            data = response.read()
+            return json.loads(data.decode('utf-8'))
+    
+class Test_next_trains(unittest.TestCase):
+    def test_next_trains(self):
+        # The goal of this test is to be a system level test that actually calls
+        # next_trains to connect together _fetch_schedules_and_predictions and
+        # _analyze_data to actually make an HTTP request to MBTA API to make
+        # sure we can really analyze that real data.
+
+        # When we provide the timestamp for "now" we will give the timestamp of
+        # 1am on the current morning. We will do this because if the test is
+        # running late at night there is a chance that there are no more trains
+        # tonight and the test expects that we will get some results back for
+        # the train. So setting the current time to 1am should ensure that we
+        # don't filter out trains that have already happened.
+        now = datetime.now()
+        mock_now = lambda : now.replace(tzinfo=None, hour=1)
+
+        train_predictor = TrainPredictor(MockNetwork(), datetime, mock_now)
+        results = train_predictor.next_trains(count=1)
+
+        self.assertEqual(len(results), 1)
+        self.assertNotEqual(results[0], None)
+        
+        # Since we said that we will test as if it is 1am we should be getting
+        # the first train of the day. This is ALMOST always an inbound train
+        # that happens a 5am. So lets verify it is inbound and happens before 8
+        # am.
+        self.assertEqual(results[0].direction, Direction.IN_BOUND)
+
+        expected_time = now.replace(hour=8)
+        self.assertLess(results[0].time, expected_time.isoformat())
+
+
+
+class Test_fetch_schedules_and_predictions(unittest.TestCase):
+    def test_fetch(self):
+        # This is a basic test that the train predictor can make a request to
+        # the MBTA APIs and get something back. For this test we won't bother
+        # doing anything more than having the MockNetwork make the request and
+        # do the json decode. If that worked that is good enough for this test.
+        # We will use Test_next_trains to connect together testing for
+        # _fetch_schedules_and_predictions and _analyze_data to make sure we can
+        # actually analyze data that is currently coming out of the API.
+        train_predictor = TrainPredictor(MockNetwork(), None, None)
+        train_predictor._fetch_schedules_and_predictions()    
 
 class Test_analyze_data(unittest.TestCase):
     # xxx doc

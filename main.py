@@ -17,33 +17,6 @@ import displayio
 
 #xxx remove unused imports
 
-#xxx read through https://www.mbta.com/developers/v3-api/best-practices#predictions to see if you are getting it right
-
-# xxx see if you can use sparce fieldsets to request less data: https://www.mbta.com/developers/v3-api/best-practices#sparse-fieldsets
-#
-# working example: https://api-v3.mbta.com/schedules?filter%5Bstop%5D=place-FB-0275&filter%5Broute%5D=CR-Franklin&sort=arrival_time&include=prediction.vehicle&fields[schedule]=arrival_time,departure_time,direction_id&fields[prediction]=arrival_time,arrival_uncertainty,departure_time,departure_uncertainty,direction_id,revenue,status&fields[vehicle]=bearing,current_status,direction_id,latitude,longitude,revenue,speed,updated_at
-
-# xxx doc list of stops https://api-v3.mbta.com/stops?filter%5Broute%5D=CR-Franklin
-
-# xxx also look at
-# https://github.com/mbta/gtfs-documentation/blob/master/reference/gtfs-realtime.md#json-feeds
-# as an alternative If I look at
-# https://cdn.mbta.com/realtime/VehiclePositions_enhanced.json and
-# https://cdn.mbta.com/realtime/VehiclePositions.json I can see that It shows me
-# actual lat / lon of vehicles. https://cdn.mbta.com/realtime/TripUpdates.json
-# also seems to show live updates. So this might give more accurate estimate
-# depending on how often it is updated. Looking at the ETag of the request and
-# the last-modified it seems to show that it really is 100% live. If I diff it
-# in meld I can even see changes in lat / lon live. So the question is will
-# api-v3.mbta.com be just as accurate or should I use cdn.mbta.com/realtime
-# instead? And if I should use cdn.mbta.com/realtime instead is there an easy
-# way to get the data I want. Doing some digging through the General Transit
-# Feed Specification Realtime (GTFS-RT) spec I do not see any way to filter the
-# data. The data that we get from these json files is MASSIVE, I think it will
-# be way too much for us to parse into json and dig through all that data to
-# find what we were looking for.
-
-
 
 # xxx doc The esp32-s3 comes with a co-processor for handling HTTP requests. So
 # ideally we would send out the HTTP request to get updated arrival times and
@@ -70,50 +43,10 @@ import displayio
 # careful about when we send the HTTP request so that it isn't in the middle of
 # an animation or something.
 
-
-
-# xxx The https://api-v3.mbta.com/vehicles API will also give us "live" (seems
-# like it updates every 10s or so) data on vehicles such as lat/lon, speed,
-# state enum (stopped, boarding, moving, ...), and so on. If the /predictions
-# API doesn't give us fine grained enough data to determine exactly when trains
-# will arrive we could always switch over to using the /vehicles API when trains
-# are getting close in order to build our own prediction about when the train
-# will pass by.
-#
-# The data on the vehicle for a prediction for a schedule is also available when
-# we request
-# https://api-v3.mbta.com/schedules?filter%5Bstop%5D=place-FB-0275&filter%5Broute%5D=CR-Franklin&sort=arrival_time&include=prediction
-# by asking for it in the include query parameter:
-# https://api-v3.mbta.com/schedules?filter%5Bstop%5D=place-FB-0275&filter%5Broute%5D=CR-Franklin&sort=arrival_time&include=prediction.vehicles
-
-# xxx get an API key get to control versioning: https://www.mbta.com/developers/v3-api/versioning
-
-# xxx this api is pretty good but it has some issues:
-# 
-# * It returns the whole scedule for the entire day including trips that has
-#   already happened, this means we need to parse a lot more data. There is an
-#   filter for min_time but the rules as per the API documentation seem a little
-#   tricky to implement as sometimes you need to use times greater than 24 hours
-#
-# * It seems like it will return all the trips with a service data of the
-#   current day. this means towards the end of the day we might not have a full
-#   list of all trains coming the next data. There is a `date` filter but it
-#   seems to not allow multiple values.
-# 
-# If needed the fetch() API does have the ability to pass in a udpate_url that
-# we could use to inject in the current date/time.
-# https://github.com/adafruit/Adafruit_CircuitPython_PortalBase/blob/d5c51a1838c3aec4d5fbfafb9f09cf62c528d58b/adafruit_portalbase/__init__.py#L438
-
-DATA_SOURCE='https://api-v3.mbta.com/schedules?filter%5Bstop%5D=place-FB-0275&filter%5Broute%5D=CR-Franklin&sort=arrival_time&include=prediction'
 DEBUG=True
 
 ARRIVAL_TIMES_FONT='fonts/6x10.bdf'
 
-# xxx doc
-# xxx these should match up with the MBTA APIS, double check that they do
-class Direction:
-    IN_BOUND = 1
-    OUT_BOUND = 0
 
 #xxx doc
 DATA_LOCATION = [
