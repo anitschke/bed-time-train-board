@@ -9,9 +9,10 @@ def mock_now_func(timeOfNow):
 class Test_relative_time_from_now(unittest.TestCase):
     def run_test(self, now, time_str, exp_result):
         now_func = mock_now_func(now)
-        deps = TimeConversionDependencies(datetime=datetime, nowFcn=now_func)
+        deps = TimeConversionDependencies(nowFcn=now_func)
         time_conv = TimeConversion(deps)
-        act_result = time_conv.relative_time_from_now(time_str)
+        train_time = datetime.fromisoformat(time_str).replace(tzinfo=None)
+        act_result = time_conv.relative_time_from_now(train_time)
         self.assertEqual(act_result, exp_result)
 
     def test_time_already_gone_past(self):

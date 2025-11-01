@@ -47,7 +47,7 @@ def print_debug(*args):
 # xxx set the status led
 matrix_portal = MatrixPortal(debug=DEBUG)
 train_predictor = TrainPredictor(TrainPredictorDependencies(matrix_portal.network, datetime, datetime.now))
-time_conversion = TimeConversion(TimeConversionDependencies(datetime, datetime.now))
+time_conversion = TimeConversion(TimeConversionDependencies(datetime.now))
 display = Display(DisplayDependencies(matrix_portal, time_conversion), text_scroll_delay=0.1, train_frame_duration=0.1)
 
 app = Application(ApplicationDependencies(matrix_portal, train_predictor, time_conversion, display))
