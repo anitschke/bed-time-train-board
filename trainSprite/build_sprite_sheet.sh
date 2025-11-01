@@ -90,13 +90,13 @@ magick -size ${WIDTH}x${HEIGHT} xc:black "$FINAL_BLACK_FRAME"
 echo "Deleting padded version before building the final sprite sheet"
 rm "$PADDED"
 
-# xxx There is something in here that we should be able to do to produce a
-# smaller image size. If I just open the generated .bmp in GIMP and then resave
-# it then I get something about half the size. So need to look into what other
-# options I have to make it smaller since we are starting to get close to
-# filling up the flash memory on the board.
-
-# xxx doc
+# Now we will stack all the frames vertically into our one big sprite sheet.
+# When we do this we want to create an image that is as small as possible since
+# we have fairly minimal storage space on the device. So we want to use 16
+# colors since that gives us a much smaller image file. For some reason I can't
+# figure out how to get it to save the image with just 16 colors in the call
+# that appends all the images together. So we will first save a full color
+# version and then make a second call to build the smaller 16 color version.
 echo "Stacking frames vertically into $OUTPUT..."
 magick convert -type Palette -append "$TMPDIR"/*.bmp "$TMPDIR"/train_full_color.bmp
 magick convert "$TMPDIR"/train_full_color.bmp  -colors 16 "$OUTPUT"
