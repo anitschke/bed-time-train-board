@@ -1,0 +1,45 @@
+{
+  "data": [
+    {
+      "attributes": {
+        "arrival_time": "2025-10-22T23:06:00-04:00",
+        "departure_time": "2025-10-22T23:06:01-04:00",
+        "direction_id": 1,
+        "drop_off_type": 0,
+        "pickup_type": 0,
+        "stop_headsign": null,
+        "stop_sequence": 130,
+        "timepoint": true
+      },
+      "id": "schedule-Sept8Read-768162-787-FB-0275-S-130",
+      "relationships": {
+        "prediction": {
+          "data": null
+        },
+        "route": {
+          "data": {
+            "id": "CR-Franklin",
+            "type": "route"
+          }
+        },
+        "stop": {
+          "data": {
+            "id": "FB-0275-S",
+            "type": "stop"
+          }
+        },
+        "trip": {
+          "data": {
+            "id": "Sept8Read-768162-787",
+            "type": "trip"
+          }
+        }
+      },
+      "type": "schedule"
+    }
+  ],
+  "included": [],
+  "jsonapi": {
+    "version": "1.0"
+  }
+}

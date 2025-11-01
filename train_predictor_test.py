@@ -74,28 +74,132 @@ class Test_fetch_schedules_and_predictions(unittest.TestCase):
         # We will use Test_next_trains to connect together testing for
         # _fetch_schedules_and_predictions and _analyze_data to make sure we can
         # actually analyze data that is currently coming out of the API.
-        deps = TrainPredictorDependencies(MockNetwork(), datetime=None, timedelta=None, nowFcn=None)
+        deps = TrainPredictorDependencies(MockNetwork(), datetime=None, timedelta=timedelta, nowFcn=None)
         train_predictor = TrainPredictor(deps)
         train_predictor._fetch_schedules_and_predictions()    
 
 class Test_analyze_data(unittest.TestCase):
-    # xxx doc
-    # xxx also add a simple inbound test
-    # xxx add offsets
     def test_simple_outbound(self):
         # Simple test with best case where we have both the schedule data and
         # prediction data for a train.
+        #
+        # Since the Children's Museum of Franklin is on the outbound side of the
+        # Franklin station we will base our prediction for outbound trains on
+        # the departure prediction time.
         mock_now = mock_now_func('2025-10-22T23:04:00-04:00')
         deps = TrainPredictorDependencies(network=None, datetime=datetime, timedelta=timedelta, nowFcn=mock_now)
         train_predictor = TrainPredictor(deps)
 
-        data = load_test_schedule_json('simple.json')
+        data = load_test_schedule_json('simple_outbound.json')
         
         count = 1
         result = train_predictor._analyze_data(count, data)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].direction, Direction.OUT_BOUND)
         self.assertEqual(result[0].time.isoformat(), "2025-10-22T23:05:11")
+
+    def test_simple_inbound(self):
+        # Simple test with best case where we have both the schedule data and
+        # prediction data for a train.
+        #
+        # Since the Children's Museum of Franklin is on the outbound side of the
+        # Franklin station we will base our prediction for inbound trains on
+        # the arrival prediction time.
+        mock_now = mock_now_func('2025-10-22T23:04:00-04:00')
+        deps = TrainPredictorDependencies(network=None, datetime=datetime, timedelta=timedelta, nowFcn=mock_now)
+        train_predictor = TrainPredictor(deps)
+
+        data = load_test_schedule_json('simple_inbound.json')
+        
+        count = 1
+        result = train_predictor._analyze_data(count, data)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].direction, Direction.IN_BOUND)
+        self.assertEqual(result[0].time.isoformat(), "2025-10-22T23:04:53")
+
+    def test_simple_outbound_positive_offset(self):
+        # Simple test with best case where we have both the schedule data and
+        # prediction data for a train.
+        #
+        # Since the Children's Museum of Franklin is on the outbound side of the
+        # Franklin station we will base our prediction for outbound trains on
+        # the departure prediction time.
+        #
+        # The average offset should be added to the estimated arrival time.
+        mock_now = mock_now_func('2025-10-22T23:04:00-04:00')
+        deps = TrainPredictorDependencies(network=None, datetime=datetime, timedelta=timedelta, nowFcn=mock_now)
+        train_predictor = TrainPredictor(deps, outboundOffsetAverageSeconds=10)
+
+        data = load_test_schedule_json('simple_outbound.json')
+        
+        count = 1
+        result = train_predictor._analyze_data(count, data)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].direction, Direction.OUT_BOUND)
+        self.assertEqual(result[0].time.isoformat(), "2025-10-22T23:05:21")
+
+    def test_simple_inbound_positive_offset(self):
+        # Simple test with best case where we have both the schedule data and
+        # prediction data for a train.
+        #
+        # Since the Children's Museum of Franklin is on the outbound side of the
+        # Franklin station we will base our prediction for inbound trains on the
+        # arrival prediction time.
+        #
+        # The average offset should be added to the estimated arrival time.
+        mock_now = mock_now_func('2025-10-22T23:04:00-04:00')
+        deps = TrainPredictorDependencies(network=None, datetime=datetime, timedelta=timedelta, nowFcn=mock_now)
+        train_predictor = TrainPredictor(deps, inboundOffsetAverageSeconds=10)
+
+        data = load_test_schedule_json('simple_inbound.json')
+        
+        count = 1
+        result = train_predictor._analyze_data(count, data)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].direction, Direction.IN_BOUND)
+        self.assertEqual(result[0].time.isoformat(), "2025-10-22T23:05:03")
+
+    def test_simple_outbound_negative_offset(self):
+        # Simple test with best case where we have both the schedule data and
+        # prediction data for a train.
+        #
+        # Since the Children's Museum of Franklin is on the outbound side of the
+        # Franklin station we will base our prediction for outbound trains on
+        # the departure prediction time.
+        #
+        # The average offset should be added to the estimated arrival time.
+        mock_now = mock_now_func('2025-10-22T23:04:00-04:00')
+        deps = TrainPredictorDependencies(network=None, datetime=datetime, timedelta=timedelta, nowFcn=mock_now)
+        train_predictor = TrainPredictor(deps, outboundOffsetAverageSeconds=-10)
+
+        data = load_test_schedule_json('simple_outbound.json')
+        
+        count = 1
+        result = train_predictor._analyze_data(count, data)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].direction, Direction.OUT_BOUND)
+        self.assertEqual(result[0].time.isoformat(), "2025-10-22T23:05:01")
+
+    def test_simple_inbound_negative_offset(self):
+        # Simple test with best case where we have both the schedule data and
+        # prediction data for a train.
+        #
+        # Since the Children's Museum of Franklin is on the outbound side of the
+        # Franklin station we will base our prediction for inbound trains on the
+        # arrival prediction time.
+        #
+        # The average offset should be added to the estimated arrival time.
+        mock_now = mock_now_func('2025-10-22T23:04:00-04:00')
+        deps = TrainPredictorDependencies(network=None, datetime=datetime, timedelta=timedelta, nowFcn=mock_now)
+        train_predictor = TrainPredictor(deps, inboundOffsetAverageSeconds=-10)
+
+        data = load_test_schedule_json('simple_inbound.json')
+        
+        count = 1
+        result = train_predictor._analyze_data(count, data)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].direction, Direction.IN_BOUND)
+        self.assertEqual(result[0].time.isoformat(), "2025-10-22T23:04:43")
 
     def test_simple_sparse(self):
         # This is the same as test_simple but uses a sparse dataset. The MBTA
@@ -114,20 +218,81 @@ class Test_analyze_data(unittest.TestCase):
         self.assertEqual(result[0].direction, Direction.OUT_BOUND)
         self.assertEqual(result[0].time.isoformat(), "2025-10-22T23:05:11")
     
-    def test_no_prediction_data(self):
+    def test_no_prediction_data_outbound(self):
         # When there is no prediction data in the JSON from the MBTA we should
         # fallback to using the schedule time
         mock_now = mock_now_func('2025-10-22T23:04:00-04:00')
         deps = TrainPredictorDependencies(network=None, datetime=datetime, timedelta=timedelta, nowFcn=mock_now)
         train_predictor = TrainPredictor(deps)
 
-        data = load_test_schedule_json('simple_no_prediction.json')
+        data = load_test_schedule_json('simple_no_prediction_outbound.json')
         
         count = 1
         result = train_predictor._analyze_data(count, data)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].direction, Direction.OUT_BOUND)
-        self.assertEqual(result[0].time.isoformat(), "2025-10-22T23:06:00-04:00")
+        self.assertEqual(result[0].time.isoformat(), "2025-10-22T23:06:01")
+
+    def test_no_prediction_data_inbound(self):
+        # When there is no prediction data in the JSON from the MBTA we should
+        # fallback to using the schedule time
+        mock_now = mock_now_func('2025-10-22T23:04:00-04:00')
+        deps = TrainPredictorDependencies(network=None, datetime=datetime, timedelta=timedelta, nowFcn=mock_now)
+        train_predictor = TrainPredictor(deps)
+
+        data = load_test_schedule_json('simple_no_prediction_inbound.json')
+        
+        count = 1
+        result = train_predictor._analyze_data(count, data)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].direction, Direction.IN_BOUND)
+        self.assertEqual(result[0].time.isoformat(), "2025-10-22T23:06:00")
+
+    def test_no_departure_outbound(self):
+        # Simple test with best case where we have both the schedule data and
+        # prediction data for a train.
+        #
+        # Since the Children's Museum of Franklin is on the outbound side of the
+        # Franklin station we will base our prediction for outbound trains on
+        # the departure prediction time.
+        #
+        # However if the departure time is null for the prediction we should
+        # fall back to using the arrival time of the prediction.
+        mock_now = mock_now_func('2025-10-22T23:04:00-04:00')
+        deps = TrainPredictorDependencies(network=None, datetime=datetime, timedelta=timedelta, nowFcn=mock_now)
+        train_predictor = TrainPredictor(deps)
+
+        data = load_test_schedule_json('simple_no_departure_outbound.json')
+        
+        count = 1
+        result = train_predictor._analyze_data(count, data)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].direction, Direction.OUT_BOUND)
+        self.assertEqual(result[0].time.isoformat(), "2025-10-22T23:04:53")
+
+
+    def test_no_arrival_inbound(self):
+        # Simple test with best case where we have both the schedule data and
+        # prediction data for a train.
+        #
+        # Since the Children's Museum of Franklin is on the outbound side of the
+        # Franklin station we will base our prediction for inbound trains on the
+        # arrival prediction time.
+        #
+        # However if the arrival time is null for the prediction we should fall
+        # back to using the departure time of the prediction.
+        mock_now = mock_now_func('2025-10-22T23:04:00-04:00')
+        deps = TrainPredictorDependencies(network=None, datetime=datetime, timedelta=timedelta, nowFcn=mock_now)
+        train_predictor = TrainPredictor(deps)
+
+        data = load_test_schedule_json('simple_no_arrival_inbound.json')
+        
+        count = 1
+        result = train_predictor._analyze_data(count, data)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].direction, Direction.IN_BOUND)
+        self.assertEqual(result[0].time.isoformat(), "2025-10-22T23:05:11")
+
 
     def test_multiple_data_request_one_result(self):
         # There are multiple possible results that could be returned but only
@@ -142,7 +307,7 @@ class Test_analyze_data(unittest.TestCase):
         result = train_predictor._analyze_data(count, data)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].direction, Direction.IN_BOUND)
-        self.assertEqual(result[0].time.isoformat(), "2025-10-22T05:06:00-04:00")
+        self.assertEqual(result[0].time.isoformat(), "2025-10-22T05:06:00")
 
     def test_multiple_data_request_more_results(self):
         # There are two possible results that could be returned but three are
@@ -157,9 +322,9 @@ class Test_analyze_data(unittest.TestCase):
         result = train_predictor._analyze_data(count, data)
         self.assertEqual(len(result), 3)
         self.assertEqual(result[0].direction, Direction.IN_BOUND)
-        self.assertEqual(result[0].time, "2025-10-22T05:06:00-04:00")
+        self.assertEqual(result[0].time.isoformat(), "2025-10-22T05:06:00")
         self.assertEqual(result[1].direction, 0)
-        self.assertEqual(result[1].time.isoformat(), "2025-10-22T06:06:00-04:00")
+        self.assertEqual(result[1].time.isoformat(), "2025-10-22T06:06:00")
         self.assertEqual(result[2], None)
 
     def old_results_filtered(self):

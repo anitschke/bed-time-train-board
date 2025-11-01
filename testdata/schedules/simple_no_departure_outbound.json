@@ -1,0 +1,92 @@
+{
+  "data": [
+    {
+      "attributes": {
+        "arrival_time": "2025-10-22T23:06:00-04:00",
+        "departure_time": "2025-10-22T23:06:00-04:00",
+        "direction_id": 0,
+        "drop_off_type": 0,
+        "pickup_type": 0,
+        "stop_headsign": null,
+        "stop_sequence": 130,
+        "timepoint": true
+      },
+      "id": "schedule-Sept8Read-768162-787-FB-0275-S-130",
+      "relationships": {
+        "prediction": {
+          "data": {
+            "id": "prediction-Sept8Read-768162-787-FB-0275-S-130-CR-Franklin",
+            "type": "prediction"
+          }
+        },
+        "route": {
+          "data": {
+            "id": "CR-Franklin",
+            "type": "route"
+          }
+        },
+        "stop": {
+          "data": {
+            "id": "FB-0275-S",
+            "type": "stop"
+          }
+        },
+        "trip": {
+          "data": {
+            "id": "Sept8Read-768162-787",
+            "type": "trip"
+          }
+        }
+      },
+      "type": "schedule"
+    }
+  ],
+  "included": [
+    {
+      "attributes": {
+        "arrival_time": "2025-10-22T23:04:53-04:00",
+        "arrival_uncertainty": null,
+        "departure_time": null,
+        "departure_uncertainty": null,
+        "direction_id": 0,
+        "last_trip": false,
+        "revenue": "REVENUE",
+        "schedule_relationship": null,
+        "status": null,
+        "stop_sequence": 130,
+        "update_type": null
+      },
+      "id": "prediction-Sept8Read-768162-787-FB-0275-S-130-CR-Franklin",
+      "relationships": {
+        "route": {
+          "data": {
+            "id": "CR-Franklin",
+            "type": "route"
+          }
+        },
+        "stop": {
+          "data": {
+            "id": "FB-0275-S",
+            "type": "stop"
+          }
+        },
+        "trip": {
+          "data": {
+            "id": "Sept8Read-768162-787",
+            "type": "trip"
+          }
+        },
+        "vehicle": {
+          "data": {
+            "id": "1813",
+            "type": "vehicle"
+          }
+        }
+      },
+      "type": "prediction"
+    }
+  ],
+  "jsonapi": {
+    "version": "1.0"
+  }
+}
