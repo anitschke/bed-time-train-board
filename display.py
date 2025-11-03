@@ -107,7 +107,7 @@ class Display:
         HEIGHT=32
 
         bitmap = displayio.OnDiskBitmap('/train.bmp')
-        sprite = displayio.TileGrid(
+        self._train_sprite = displayio.TileGrid(
             bitmap,
             pixel_shader=bitmap.pixel_shader,
             tile_width=WIDTH,
@@ -115,7 +115,7 @@ class Display:
         )
 
         self._train_sprite_group = displayio.Group()
-        self._train_sprite_group.append(sprite)
+        self._train_sprite_group.append(self._train_sprite)
         self._matrix_portal.display.root_group.append(self._train_sprite_group)
 
         self._train_frame_count = int(bitmap.height / HEIGHT)
@@ -126,7 +126,7 @@ class Display:
         # The train animation is setup for an outbound train by default. So if
         # we want to render an inbound train we need to flip the sprite
         if (direction == Direction.IN_BOUND):
-            self._train_sprite_group.flip_x = True
+            self._train_sprite.flip_x = True
 
         current_frame = 0
         while True:

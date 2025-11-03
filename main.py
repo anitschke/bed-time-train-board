@@ -1,6 +1,7 @@
 import time
 from adafruit_matrixportal.matrixportal import MatrixPortal
 from adafruit_datetime import datetime,timedelta
+import adafruit_logging as logging
 from train_predictor import TrainPredictor, TrainPredictorDependencies
 from time_conversion import TimeConversion, TimeConversionDependencies
 from display import Display, DisplayDependencies
@@ -34,7 +35,16 @@ from application import Application, ApplicationDependencies
 # careful about when we send the HTTP request so that it isn't in the middle of
 # an animation or something.
 
+logger = logging.getLogger('test')
+
+logger.setLevel(logging.ERROR)
+logger.info('Info message')
+logger.error('Error message')
+
+
 DEBUG=True
+
+
 
 
 # xxx doc
