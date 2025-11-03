@@ -1,5 +1,6 @@
 import time
 import supervisor
+import gc #xxx
 
 #xxx remove unused imports
 
@@ -101,6 +102,7 @@ class Application:
         self._logger.debug("running nightly tasks")
         self._try_method(self._sync_clock)
         self._try_method(self._add_watchdog_log)
+        self._logger.debug(f"Free memory: {gc.mem_free()} bytes")
 
     def _add_watchdog_log(self):
         # xxx doc have a watchdog setup on adafruit IO to allert me if we stop getting logs, This make sure we always have some logs.

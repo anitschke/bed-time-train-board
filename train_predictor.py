@@ -100,7 +100,7 @@ class TrainArrival:
         self.std_dev = std_dev
 
     def str(self):
-        return f"time: {self.time}, direction: {direction_str(self.direction)}"
+        return f"time: {self.time}, direction: {direction_str(self.direction)}, std_dev: {self.std_dev}"
 
     @staticmethod
     def sort_by_time(train):
