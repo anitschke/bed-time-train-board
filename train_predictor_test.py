@@ -95,6 +95,7 @@ class Test_analyze_data(unittest.TestCase):
         count = 1
         result = train_predictor._analyze_data(count, data)
         self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].schedule_id, "schedule-Sept8Read-768162-787-FB-0275-S-130")
         self.assertEqual(result[0].direction, Direction.OUT_BOUND)
         self.assertEqual(result[0].time.isoformat(), "2025-10-22T23:05:11")
         self.assertEqual(result[0].std_dev, timedelta(seconds=4321))
@@ -115,6 +116,7 @@ class Test_analyze_data(unittest.TestCase):
         count = 1
         result = train_predictor._analyze_data(count, data)
         self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].schedule_id, "schedule-Sept8Read-768162-787-FB-0275-S-130")
         self.assertEqual(result[0].direction, Direction.IN_BOUND)
         self.assertEqual(result[0].time.isoformat(), "2025-10-22T23:04:53")
         self.assertEqual(result[0].std_dev, timedelta(seconds=1234))

@@ -131,6 +131,7 @@ class Application:
             if train_warning is not None:
                 while not train_warning.shouldStop():
                     self._try_method(self._display.render_train, [train_warning.direction])
+                self._try_method(self._train_predictor.mark_train_arrived, [self._trains[0]])
             else:
                 self._try_method(self._display.render_arrival_times, [self._trains])
                 self._try_method(self._display.scroll_text)

@@ -1,6 +1,7 @@
 # xxx doc
 import gc
 import time
+from collections import OrderedDict
 
 #xxx read through https://www.mbta.com/developers/v3-api/best-practices#predictions to see if you are getting it right
 
@@ -62,6 +63,30 @@ import time
 
 DATA_SOURCE='https://api-v3.mbta.com/schedules?filter%5Bstop%5D=place-FB-0275&filter%5Broute%5D=CR-Franklin&sort=arrival_time&include=prediction'
 
+# LimitedSizeOrderedSet is a set that removes the oldest elements when we hit
+# the max length
+#
+# xxx test
+class LimitedSizeOrderedSet:
+    def __init__(self, max_size):
+        self.max_size = max_size
+        self._data = OrderedDict()
+
+    def add(self, element):
+        if element not in self._data:
+            self._data[element] = None  # Value can be anything, key is what matters
+            if len(self._data) > self.max_size:
+                self._data.popitem(last=False)
+
+    def __contains__(self, element):
+        return element in self._data
+
+    def __len__(self):
+        return len(self._data)
+
+    def __iter__(self):
+        return iter(self._data)
+
 
 # xxx doc
 # 
@@ -94,7 +119,8 @@ def direction_str(direction):
 # xxx doc
 # xxx doc std_dev
 class TrainArrival:
-    def __init__(self, time, direction, std_dev):
+    def __init__(self, schedule_id, time, direction, std_dev):
+        self.schedule_id = schedule_id
         self.time = time
         self.direction = direction
         self.std_dev = std_dev
@@ -124,7 +150,7 @@ class TrainPredictorDependencies:
         self.nowFcn = nowFcn 
 
 class TrainPredictor:
-    def __init__(self, dependencies: TrainPredictorDependencies, filterResultsAfterSeconds = 120, trainWarningSeconds = 0, inboundOffsetAverageSeconds=0, inboundOffsetStdDevSeconds=0, outboundOffsetAverageSeconds=0, outboundOffsetStdDevSeconds=0):
+    def __init__(self, dependencies: TrainPredictorDependencies, filterResultsAfterSeconds = 30, trainWarningSeconds = 0, inboundOffsetAverageSeconds=0, inboundOffsetStdDevSeconds=0, outboundOffsetAverageSeconds=0, outboundOffsetStdDevSeconds=0):
         self._network = dependencies.network
         self._datetime = dependencies.datetime
         self._timedelta = dependencies.timedelta
@@ -138,6 +164,10 @@ class TrainPredictor:
         self._outboundOffsetAverage = self._timedelta(seconds = outboundOffsetAverageSeconds)
         self._outboundOffsetStdDev = self._timedelta(seconds = outboundOffsetStdDevSeconds)
     
+        self._arrived_trains = LimitedSizeOrderedSet(100)
+
+        self._cached_train = None
+
         # The MBTA API responds with a content type header of
         # "application/vnd.api+json". When the matrix portal looks at the
         # response from this API it looks at the content type header to decide
@@ -172,6 +202,11 @@ class TrainPredictor:
         end_monatomic = now_monatomic + remaining_seconds
         
         return TrainWarning(end_monatomic, train.direction)
+    
+    # xxx doc
+    # xxx test
+    def mark_train_arrived(self, train):
+        self._arrived_trains.add(train.schedule_id)
 
     def _fetch_schedules_and_predictions(self):
         # xxx move DATA_SOURCE into TrainPredictor?
@@ -180,27 +215,29 @@ class TrainPredictor:
         return response.json()
     
     # xxx test
-    def _compute_train(self, schedule, prediction):
-        
-        direction = schedule.get("direction_id")
+    def _compute_train(self, schedule_id, schedule, prediction):
+        # If we know the train has already arrived then ignore it
+        if schedule_id in self._arrived_trains:
+            return None
 
+        direction = schedule.get("direction_id")
         cmf_arrival_time = self._get_estimated_cmf_arrival_time(schedule, prediction, direction)
         if cmf_arrival_time is None:
             return None
         
+        # Remove any times more than self._filterResultsAfterSeconds (by default
+        # 5 minutes ago). For the most part trains that have already passed by
+        # should be removed with the _arrived_trains check because we call
+        # mark_train_arrived to mark the train as already arrived, so we really
+        # just need to deal with filtering out old trains from before the board
+        # first starts up.
+        now = self._nowFcn()
+        if (cmf_arrival_time - now).total_seconds() < (-1 * self._filterResultsAfterSeconds):
+            return None
+
         std_dev = self._inboundOffsetStdDev if direction == Direction.IN_BOUND else self._outboundOffsetStdDev
-
-        # xxx it would be a lot more efficient to do the check to see if we need
-        # to keep the train around here and just return None if the train has
-        # passed by rather than add it to an array that will get even bigger and
-        # take up more memory that we need to eventually filter down.
-
-        # xxx we could also do some things to make it more efficient like if the
-        # train is more than 4 or 8 or 12 hours away then don't bother returning
-        # it too
-
         
-        train = TrainArrival(cmf_arrival_time, direction, std_dev)
+        train = TrainArrival(schedule_id, cmf_arrival_time, direction, std_dev)
         return train
 
     # xxx test
@@ -241,7 +278,6 @@ class TrainPredictor:
         offset = self._inboundOffsetAverage if direction == Direction.IN_BOUND else self._outboundOffsetAverage
         cmf_time = station_time + offset
         return cmf_time
-
 
     def _analyze_data(self, count, schedule_json):
         gc.collect()
@@ -289,38 +325,18 @@ class TrainPredictor:
 
             # Compute the train object
             schedule_attrs = item.get("attributes", {})
-            train = self._compute_train(schedule_attrs, perdition)
+            train = self._compute_train(item.get("id"), schedule_attrs, perdition)
             if train is not None:
                 trains.append(train)
 
         # Sort the list
         trains.sort(key=TrainArrival.sort_by_time)
 
-        # xxxxxxxxxxx figure out how to turn print_debug back on in tests
-        # print_debug("times:", times) 
-
-        # Remove any times more than self._filterResultsAfterSeconds (by default
-        # 2 minutes ago). When we do this we need to make sure we remove any
-        # time zone information or else we get "CircuitPython does not currently
-        # implement time.gmtime" errors.
-        now = self._nowFcn()
-        # print_debug("now:", now)
-        trains = [t for t in trains if (t.time - now).total_seconds() >= (-1 * self._filterResultsAfterSeconds)]
-        # print_debug("filtered trains:", trains)
-
         # We only need "count" times as we only display that many on the board. So we
         # will trim or pad the array so we always have "count" values:
         while len(trains) < count:
             trains.append(None)
         trains = trains[:count]
-        # print_debug("filtered times:", trains)
-
-
-        #xxx move this into the display code
-
-        # # Now transform them into nice user readable times
-        # readable_times = [get_arrival_in_minutes_from_now(now, t) for t in times]
-        # print_debug("readable_times:", times)
 
         return trains
     
