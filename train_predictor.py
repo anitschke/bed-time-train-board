@@ -86,6 +86,31 @@ class LimitedSizeOrderedSet:
 
     def __iter__(self):
         return iter(self._data)
+    
+# xxx doc
+# 
+# xxx test
+class LimitedSizeOrderedDict:
+    def __init__(self, max_size):
+        self.max_size = max_size
+        self._data = OrderedDict()
+
+    def __setitem__(self, key, value):
+        self._data[key] = value  # Value can be anything, key is what matters
+        if len(self._data) > self.max_size:
+            self._data.popitem(last=False)
+
+    def __getitem__(self, key):
+        return self._data[key]
+
+    def __contains__(self, key):
+        return key in self._data
+
+    def __len__(self):
+        return len(self._data)
+
+    def __iter__(self):
+        return iter(self._data)
 
 
 # xxx doc
@@ -166,7 +191,11 @@ class TrainPredictor:
     
         self._arrived_trains = LimitedSizeOrderedSet(100)
 
-        self._cached_train = None
+        # xxx doc uses schedule ID as key and has train as value.
+        # Needed to make sure we don't get arrival time messed up when prediction goes away
+        # 
+        # xxx test
+        self._train_prediction_cache = LimitedSizeOrderedDict(10)
 
         # The MBTA API responds with a content type header of
         # "application/vnd.api+json". When the matrix portal looks at the
@@ -221,7 +250,7 @@ class TrainPredictor:
             return None
 
         direction = schedule.get("direction_id")
-        cmf_arrival_time = self._get_estimated_cmf_arrival_time(schedule, prediction, direction)
+        cmf_arrival_time, time_is_from_prediction = self._get_estimated_cmf_arrival_time(schedule, prediction, direction)
         if cmf_arrival_time is None:
             return None
         
@@ -236,8 +265,37 @@ class TrainPredictor:
             return None
 
         std_dev = self._inboundOffsetStdDev if direction == Direction.IN_BOUND else self._outboundOffsetStdDev
-        
+
         train = TrainArrival(schedule_id, cmf_arrival_time, direction, std_dev)
+
+        # Outbound trains have a prediction time to arrive at the Children's
+        # Museum of Franklin after it leaves the Franklin station. Unfortunately
+        # as we noticed when analyzing data (see
+        # https://github.com/anitschke/childrens-museum-franklin-train-board-data-analysis
+        # ) as soon as a train leaves from a station MBTA removes the
+        # prediction. This could cause issues for us because we still need that
+        # prediction to predict when it will pass by the Children's Museum of
+        # Franklin. If the time offsets are such that we don't start playing the
+        # train warning animation before the train leaves the station the
+        # prediction will go away and we won't have an accurate measure of when
+        # the train is leaving.
+        # 
+        # I think that the Children's Museum of Franklin is close enough that
+        # the time offsets won't ever have this happen. But just to be on the
+        # safe side we will do some caching to prevent it. For a given schedule
+        # we will cache the train arrival object if the train arrival object was
+        # crated using prediction data.
+        # 
+        # Then later if we see that the train arrival data is no logger from a
+        # prediction we will used the cached copy from the prediction if we have
+        # it.
+        # 
+        # xxx test
+        if time_is_from_prediction:
+            self._train_prediction_cache[schedule_id] = train
+        elif schedule_id in self._train_prediction_cache:
+            return self._train_prediction_cache[schedule_id]
+
         return train
 
     # xxx test
@@ -247,10 +305,10 @@ class TrainPredictor:
         if prediction is not None:
             result = self._compute_cmf_arrival_time(direction, prediction.get("arrival_time"), prediction.get("departure_time"))
             if result is not None:
-                return result
+                return result, True
         
         # Fall back to using schedule data
-        return self._compute_cmf_arrival_time(schedule.get("direction_id"), schedule.get("arrival_time"), schedule.get("departure_time"))
+        return self._compute_cmf_arrival_time(schedule.get("direction_id"), schedule.get("arrival_time"), schedule.get("departure_time")), False
 
     def _compute_cmf_arrival_time(self, direction, arrival_time, departure_time):
         # We are using the Franklin station for our predictions since it is

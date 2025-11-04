@@ -69,6 +69,7 @@ class Application:
         self._try_method(self._sync_clock)
 
     # xxx doc
+    # xxx also add _try_method to dependency creation
     def _try_method(self, method, positional_arguments = [], keyword_arguments = {}):
         attempt_count = 0
         max_attempt_count = 5
