@@ -45,7 +45,12 @@ matrix_portal = MatrixPortal()
 log_levels = logging.LogLevels(aio_handler=logging.INFO, print_handler=logging.DEBUG)
 logger = logging.newLogger(logging.LoggerDependencies(matrix_portal), log_levels)
 
-train_predictor = TrainPredictor(TrainPredictorDependencies(matrix_portal.network, datetime, timedelta, datetime.now), trainWarningSeconds=60) # xxx
+# xxx doc where these numbers come from
+train_predictor = TrainPredictor(TrainPredictorDependencies(matrix_portal.network, datetime, timedelta, datetime.now), 
+    trainWarningSeconds=60,
+    inboundOffsetAverageSeconds=-63, inboundOffsetStdDevSeconds=9,
+    outboundOffsetAverageSeconds=93, outboundOffsetStdDevSeconds=9)
+
 time_conversion = TimeConversion(TimeConversionDependencies(datetime.now))
 display = Display(DisplayDependencies(matrix_portal, time_conversion, logger), text_scroll_delay=0.1, train_frame_duration=0.1)
 
