@@ -1,47 +1,13 @@
 import time
 import supervisor
-import gc #xxx
 import board
 from digitalio import DigitalInOut, Pull
 from train_predictor import Direction
 
-
-#xxx remove unused imports
-
-# xxx add a note somewhere, maybe in the README that this is a lot more
+# xxx doc add a note somewhere, maybe in the README that this is a lot more
 # complicated than it needs to be. If you just want simple text update without
 # the animation or other logic I need for computing and caching go point back at
 # an earlier commit.
-
-# xxx doc The esp32-s3 comes with a co-processor for handling HTTP requests. So
-# ideally we would send out the HTTP request to get updated arrival times and
-# have the co-processor wait for the response. While we are waiting for the
-# response the main processor can continue doing other tasks like animating the
-# board. The idea here is that I could use async / await along with asyncio
-# python library to do cooperative multitasking (
-# https://learn.adafruit.com/cooperative-multitasking-in-circuitpython-with-asyncio/overview
-# ). The main processor can just keep checking in to see if the co-processor has
-# finished receiving the HTTP response. 
-# 
-# Unfortunately the CircuitPython Requests library that we can use for sending
-# HTTP requests on the esp32-s3 Matrix Portal board does not have async method
-# that we can use to send HTTP requests. There is an issue about this on GitHub,
-# I did some investigation into this. It would be possible to add this
-# functionality but it would be a lot of work because it would requiring making
-# the low level socket using for sending the HTTP request async in order to add
-# a way for the processor to wait for the coprocessor to receive response at the
-# correct point in time. This is just too much work for the train board that I
-# am working on.
-# https://github.com/adafruit/Adafruit_CircuitPython_Requests/issues/134#issuecomment-3415845378 
-# 
-# xxx doc As a result we need to work around this issue. So we need to be
-# careful about when we send the HTTP request so that it isn't in the middle of
-# an animation or something.
-
-# xxx hook something up so you can get stuff to happen by pressing the up and
-# down buttons on the board. Maybe play the train animation in either direction?
-
-#xxx add a bunch of error protection
 
 NUM_TRAINS_TO_FETCH=3
 
@@ -98,9 +64,9 @@ class Application:
     def _startup(self):
         self._logger.info("starting train board")
         self._try_method(self._sync_clock)
+        self._try_method(self._display.initialize)
 
     # xxx doc
-    # xxx also add _try_method to dependency creation
     def _try_method(self, method, positional_arguments = [], keyword_arguments = {}):
         attempt_count = 0
         max_attempt_count = 5
@@ -124,17 +90,17 @@ class Application:
 
     def _nightly_tasks(self):
         # xxx doc
-        if time.monotonic() < self._last_nightly_tasks_run + 86400:
+        if time.monotonic() < self._last_nightly_tasks_run + 7200:
             return
         
         now = self._nowFcn()
-        if now.hour < 3 or now.hour >3:
+        if now.hour is not 9:
             return
 
         self._logger.debug("running nightly tasks")
+        self._last_nightly_tasks_run = time.monotonic()
         self._try_method(self._sync_clock)
         self._try_method(self._add_watchdog_log)
-        self._logger.debug(f"Free memory: {gc.mem_free()} bytes")
 
     def _add_watchdog_log(self):
         # xxx doc have a watchdog setup on adafruit IO to allert me if we stop getting logs, This make sure we always have some logs.
@@ -143,11 +109,9 @@ class Application:
 
     # xxx doc
     def _sync_clock(self):
-        # xxx doc sync current time
-        # xxx is there any time float, I should probably update the time every once in a while.
-        # xxx double check that calling this multiple times will actually sync the time multiple times
         self._logger.debug("getting network time")
         self._matrix_portal.network.get_local_time(location="America/New_York")
+        self._logger.debug(f"current time set to {self._nowFcn()}")
 
     def _fetch_next_trains(self):
         # We generally want to make requests to update the train arrival times
@@ -166,6 +130,36 @@ class Application:
             self._logger.debug(f"trains: {self._trains}")
             
     def _run_loop(self):
+        # _run_loop is the main event loop for the board.
+        # 
+        # My understanding is that the the esp32-s3 comes with a co-processor
+        # for handling HTTP requests. So ideally we would send out the HTTP
+        # request to get updated arrival times and have the co-processor wait
+        # for the response. While we are waiting for the response the main
+        # processor can continue doing other tasks like animating the board. The
+        # idea here is that I could use async / await along with asyncio python
+        # library to do cooperative multitasking (
+        # https://learn.adafruit.com/cooperative-multitasking-in-circuitpython-with-asyncio/overview
+        # ). The main processor can just keep checking in to see if the
+        # co-processor has finished receiving the HTTP response. 
+        # 
+        # Unfortunately the CircuitPython Requests library that we can use for
+        # sending HTTP requests on the esp32-s3 Matrix Portal board does not
+        # have async method that we can use to send HTTP requests. There is an
+        # issue about this on GitHub, I did some investigation into this. It
+        # would be possible to add this functionality but it would be a lot of
+        # work because it would requiring making the low level socket using for
+        # sending the HTTP request async in order to add a way for the processor
+        # to wait for the coprocessor to receive response at the correct point
+        # in time. This is just too much work for the train board that I am
+        # working on.
+        # https://github.com/adafruit/Adafruit_CircuitPython_Requests/issues/134#issuecomment-3415845378 
+        # 
+        # So instead what we will do is just wait to send HTTP requests at
+        # opportune times. We make sure we wait for the text to totally scroll
+        # across the screen or any train animation to finish running before we
+        # make a new request for train data. Once we get the response for train
+        # data we can resume the normal loop.
         while True:
             # First look for user input from buttons.
             # 

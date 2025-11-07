@@ -3,7 +3,7 @@ from collections import OrderedDict
 # LimitedSizeOrderedSet is a set that removes the oldest elements when we hit
 # the max length
 #
-# xxx test
+# xxx doc
 class LimitedSizeOrderedSet:
     def __init__(self, max_size):
         self.max_size = max_size
@@ -35,8 +35,6 @@ class LimitedSizeOrderedSet:
         return iter(self._data)
     
 # xxx doc
-# 
-# xxx test
 class LimitedSizeOrderedDict:
     def __init__(self, max_size):
         self.max_size = max_size

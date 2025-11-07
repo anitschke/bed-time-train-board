@@ -19,7 +19,6 @@ class DisplayDependencies:
         self.logger = logger
 
 # xxx doc
-# xxx test
 
 class Display:
     def __init__(self, dependencies : DisplayDependencies, text_scroll_delay, train_frame_duration):
@@ -33,10 +32,12 @@ class Display:
         
         self._arrival_time_indices = None
 
+    def initialize(self):
         # xxx doc important we init train after arrival times so it shows up on top
         self._initialize_arrival_times()
         self._initialize_train()
         gc.collect()
+
     def _set_mode(self, mode):
         if mode == DisplayMode.ARRIVAL_TIMES:
             self._tLogo.hidden = False

@@ -21,8 +21,6 @@ class LoggerDependencies:
     def __init__(self,  matrix_portal):
         self.matrix_portal = matrix_portal
 
-# xxx add more logging
-
 # xxx doc ideally we would also log with the RotatingFileHandler which provides very
 # nice rotating log files
 # https://github.com/adafruit/Adafruit_CircuitPython_Logging/blob/24c00a78a6ee6a41a87a8675e75742f990f1ee94/adafruit_logging.py#L325
@@ -65,5 +63,7 @@ class AIOHandler(logging.Handler):
         self._matrix_portal = matrix_portal
 
     def emit(self, record):
-        # xxx wrap in try catch, shouldn't cause issues if we fail to write to io
-        self._matrix_portal.push_to_io(self._feed_name, self.format(record))
+        try:
+            self._matrix_portal.push_to_io(self._feed_name, self.format(record))
+        except Exception as e:
+            print(f"Failed to push logs to adafruit.io: ${e}")

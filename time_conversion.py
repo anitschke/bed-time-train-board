@@ -1,5 +1,3 @@
-import math
-
 # xxx doc
 class TimeConversionDependencies:
     def __init__(self, nowFcn):
@@ -7,7 +5,6 @@ class TimeConversionDependencies:
 
 
 # xxx doc
-
 class TimeConversion:
     def __init__(self, dependencies: TimeConversionDependencies):
         self._nowFcn = dependencies.nowFcn

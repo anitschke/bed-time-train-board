@@ -3,39 +3,17 @@ import gc
 import time
 from collections_extra import LimitedSizeOrderedSet, LimitedSizeOrderedDict
 
-#xxx read through https://www.mbta.com/developers/v3-api/best-practices#predictions to see if you are getting it right
-
-# xxx see if you can use sparce fieldsets to request less data: https://www.mbta.com/developers/v3-api/best-practices#sparse-fieldsets
-#
-# working example: https://api-v3.mbta.com/schedules?filter%5Bstop%5D=place-FB-0275&filter%5Broute%5D=CR-Franklin&sort=arrival_time&include=prediction.vehicle&fields[schedule]=arrival_time,departure_time,direction_id&fields[prediction]=arrival_time,arrival_uncertainty,departure_time,departure_uncertainty,direction_id,revenue,status&fields[vehicle]=bearing,current_status,direction_id,latitude,longitude,revenue,speed,updated_at
+# xxx doc mention https://www.mbta.com/developers/v3-api/best-practices#predictions and how we don't do that exactly
 
 # xxx doc list of stops https://api-v3.mbta.com/stops?filter%5Broute%5D=CR-Franklin
 
-# xxx also look at
-# https://github.com/mbta/gtfs-documentation/blob/master/reference/gtfs-realtime.md#json-feeds
-# as an alternative If I look at
-# https://cdn.mbta.com/realtime/VehiclePositions_enhanced.json and
-# https://cdn.mbta.com/realtime/VehiclePositions.json I can see that It shows me
-# actual lat / lon of vehicles. https://cdn.mbta.com/realtime/TripUpdates.json
-# also seems to show live updates. So this might give more accurate estimate
-# depending on how often it is updated. Looking at the ETag of the request and
-# the last-modified it seems to show that it really is 100% live. If I diff it
-# in meld I can even see changes in lat / lon live. So the question is will
-# api-v3.mbta.com be just as accurate or should I use cdn.mbta.com/realtime
-# instead? And if I should use cdn.mbta.com/realtime instead is there an easy
-# way to get the data I want. Doing some digging through the General Transit
-# Feed Specification Realtime (GTFS-RT) spec I do not see any way to filter the
-# data. The data that we get from these json files is MASSIVE, I think it will
-# be way too much for us to parse into json and dig through all that data to
-# find what we were looking for.
-
-# xxx The https://api-v3.mbta.com/vehicles API will also give us "live" (seems
-# like it updates every 10s or so) data on vehicles such as lat/lon, speed,
-# state enum (stopped, boarding, moving, ...), and so on. If the /predictions
-# API doesn't give us fine grained enough data to determine exactly when trains
-# will arrive we could always switch over to using the /vehicles API when trains
-# are getting close in order to build our own prediction about when the train
-# will pass by.
+# xxx doc mention that we could geofence The https://api-v3.mbta.com/vehicles
+# API will also give us "live" (seems like it updates every 10s or so) data on
+# vehicles such as lat/lon, speed, state enum (stopped, boarding, moving, ...),
+# and so on. If the /predictions API doesn't give us fine grained enough data to
+# determine exactly when trains will arrive we could always switch over to using
+# the /vehicles API when trains are getting close in order to build our own
+# prediction about when the train will pass by.
 #
 # The data on the vehicle for a prediction for a schedule is also available when
 # we request
@@ -43,25 +21,43 @@ from collections_extra import LimitedSizeOrderedSet, LimitedSizeOrderedDict
 # by asking for it in the include query parameter:
 # https://api-v3.mbta.com/schedules?filter%5Bstop%5D=place-FB-0275&filter%5Broute%5D=CR-Franklin&sort=arrival_time&include=prediction.vehicles
 
-# xxx get an API key get to control versioning: https://www.mbta.com/developers/v3-api/versioning
-
-# xxx this api is pretty good but it has some issues:
+# DATA_SOURCE is the URL for the MBTA API that we query to get data about
+# trains.
 # 
-# * It returns the whole scedule for the entire day including trips that has
-#   already happened, this means we need to parse a lot more data. There is an
-#   filter for min_time but the rules as per the API documentation seem a little
-#   tricky to implement as sometimes you need to use times greater than 24 hours
-#
-# * It seems like it will return all the trips with a service data of the
-#   current day. this means towards the end of the day we might not have a full
-#   list of all trains coming the next data. There is a `date` filter but it
-#   seems to not allow multiple values.
+# There is very good documentation for this API here
+# https://www.mbta.com/developers/v3-api
 # 
-# If needed the fetch() API does have the ability to pass in a udpate_url that
-# we could use to inject in the current date/time.
-# https://github.com/adafruit/Adafruit_CircuitPython_PortalBase/blob/d5c51a1838c3aec4d5fbfafb9f09cf62c528d58b/adafruit_portalbase/__init__.py#L438
-
-DATA_SOURCE='https://api-v3.mbta.com/schedules?filter%5Bstop%5D=place-FB-0275&filter%5Broute%5D=CR-Franklin&sort=arrival_time&include=prediction'
+# In general what we are doing is querying for a schedule of when all trains are
+# arriving at the Franklin MBTA station.
+# 
+# We also ask it to include any predictions that are associated with a given
+# schedule. This allows us to use a more accurate prediction when possible but
+# otherwise fallback to a the less accurate schedule time for trains that are a
+# ways off and don't have a predation yet.
+# 
+# The "fields" query parameters is a sparce field set that we use to request
+# what specific data we are interested in. It means that we get less data back
+# that we need to process. See
+# https://www.mbta.com/developers/v3-api/best-practices#sparse-fieldsets
+# 
+# One main disadvantage to this approach is the
+# https://api-v3.mbta.com/schedules API will by default give us the schedule for
+# ALL trains for today, even ones that have passed by. There are some "filter"
+# options to filter by date and by time but it seems that this needs to be
+# specified as an absolute date / time which means we would need to deal with
+# updating the URL with the current date/time every time we make a request.
+# There is also some tricky logic with how the consider times due to the
+# "service date" of trains ( see
+# https://api-v3.mbta.com/docs/swagger/index.html#/Schedule/ApiWeb_ScheduleController_index
+# ). So for now we will just request ALL the trains for today and filter them
+# when we get the data back. 
+DATA_SOURCE="https://api-v3.mbta.com/schedules?" \
+  "filter[stop]=place-FB-0275&" \
+  "filter[route]=CR-Franklin&" \
+  "sort=arrival_time&" \
+  "include=prediction&" \
+  "fields[schedule]=arrival_time,departure_time,direction_id&" \
+  "fields[prediction]=arrival_time,departure_time,direction_id'" 
 
 
 # xxx doc
@@ -292,6 +288,8 @@ class TrainPredictor:
         # other time. This is since we still want to use prediction data over
         # using schedule or not coming up with an answer at all.
         #
+        # xxx doc also mention offset
+        #
         # xxx doc point to analysis page
 
         station_time_str = (arrival_time or departure_time) if direction == Direction.IN_BOUND else (departure_time or arrival_time)
@@ -309,7 +307,9 @@ class TrainPredictor:
         trains = []
         included = {item["id"]: item for item in schedule_json.get("included", [])}
 
-        # xxx this logic could probably be improved some depending on how accurate
+        # xxx doc some old notes that need to be cleaned up:
+        # 
+        # this logic could probably be improved some depending on how accurate
         # we want to try to get the board:
         # 
         # 1. We want to predict the time that the train passes the children's
