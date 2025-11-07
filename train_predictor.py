@@ -122,11 +122,12 @@ class TrainWarning:
         return time.monotonic() > self._end_monotonic
 
 class TrainPredictorDependencies:
-    def __init__(self, network, datetime, timedelta, nowFcn):
+    def __init__(self, network, datetime, timedelta, nowFcn, mbta_api_key):
         self.network = network 
         self.datetime = datetime 
         self.timedelta = timedelta
-        self.nowFcn = nowFcn 
+        self.nowFcn = nowFcn
+        self.mbta_api_key = mbta_api_key
 
 class TrainPredictor:
     def __init__(self, dependencies: TrainPredictorDependencies, filterResultsAfterSeconds = 30, trainWarningSeconds = 0, inboundOffsetAverageSeconds=0, inboundOffsetStdDevSeconds=0, outboundOffsetAverageSeconds=0, outboundOffsetStdDevSeconds=0):
@@ -150,6 +151,13 @@ class TrainPredictor:
         # 
         # xxx test
         self._train_prediction_cache = LimitedSizeOrderedDict(10)
+
+        self._mbta_api_headers = {
+            "accept":  "application/vnd.api+json"
+        }
+        if dependencies.mbta_api_key is not None:
+            self._mbta_api_headers["x-api-key"] = dependencies.mbta_api_key
+        
 
         # The MBTA API responds with a content type header of
         # "application/vnd.api+json". When the matrix portal looks at the
@@ -192,9 +200,14 @@ class TrainPredictor:
         self._arrived_trains.add(train.schedule_id)
 
     def _fetch_schedules_and_predictions(self):
-        # xxx move DATA_SOURCE into TrainPredictor?
-        # xxx what do I want for a timeout here?
-        response = self._network.fetch(DATA_SOURCE, timeout=10)
+        # When doing data analysis I ran into a few cases where the request to
+        # the MBTA API appeared to stall and time out forever. So we want to
+        # make sure we have a timeout here to make sure the request doesn't
+        # totally stall.
+        timeout = 10
+        response = self._network.fetch(DATA_SOURCE, headers=self._mbta_api_headers, timeout=timeout)
+        if response.status_code is not 200:
+            raise RuntimeError(f"Failed to fetch data from MBTA API. status_code: {response.status_code} response: {response.text}")
         return response.json()
     
     # xxx test

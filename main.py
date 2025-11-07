@@ -1,3 +1,5 @@
+import os
+
 from adafruit_matrixportal.matrixportal import MatrixPortal
 from adafruit_datetime import datetime,timedelta
 
@@ -35,7 +37,6 @@ from application import Application, ApplicationDependencies
 # careful about when we send the HTTP request so that it isn't in the middle of
 # an animation or something.
 
-
 # xxx reduce to error or info
 
 # xxx set the status led
@@ -44,8 +45,13 @@ matrix_portal = MatrixPortal()
 log_levels = logging.LogLevels(aio_handler=logging.INFO, print_handler=logging.DEBUG)
 logger = logging.newLogger(logging.LoggerDependencies(matrix_portal), log_levels)
 
+mbta_api_key = os.getenv("MBTA_API_KEY")
+if mbta_api_key is None:
+    logger.error("missing MBTA API key")
+    raise KeyError("missing MBTA API key")
+
 # xxx doc where these numbers come from
-train_predictor = TrainPredictor(TrainPredictorDependencies(matrix_portal.network, datetime, timedelta, datetime.now), 
+train_predictor = TrainPredictor(TrainPredictorDependencies(matrix_portal.network, datetime, timedelta, datetime.now, mbta_api_key), 
     trainWarningSeconds=60,
     inboundOffsetAverageSeconds=-63, inboundOffsetStdDevSeconds=9,
     outboundOffsetAverageSeconds=93, outboundOffsetStdDevSeconds=9)
