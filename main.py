@@ -1,4 +1,5 @@
 import os
+import board
 
 from adafruit_matrixportal.matrixportal import MatrixPortal
 from adafruit_datetime import datetime,timedelta
@@ -9,8 +10,7 @@ from time_conversion import TimeConversion, TimeConversionDependencies
 from display import Display, DisplayDependencies
 from application import Application, ApplicationDependencies
 
-# xxx set the status led
-matrix_portal = MatrixPortal()
+matrix_portal = MatrixPortal(status_neopixel=board.NEOPIXEL)
 
 log_levels = logging.LogLevels(aio_handler=logging.INFO, print_handler=logging.DEBUG)
 logger = logging.newLogger(logging.LoggerDependencies(matrix_portal), log_levels)
