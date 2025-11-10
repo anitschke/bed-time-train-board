@@ -123,9 +123,10 @@ class Display:
         self._set_mode(DisplayMode.TRAIN)
 
         # The train animation is setup for an outbound train by default. So if
-        # we want to render an inbound train we need to flip the sprite
-        if (direction == Direction.IN_BOUND):
-            self._train_sprite.flip_x = True
+        # we want to render an inbound train we need to flip the sprite.
+        # Otherwise we need to make sure we DON'T flip the sprit (it might have
+        # been set to flip_x from last time we rendered a train).
+        self._train_sprite.flip_x = direction == Direction.IN_BOUND
 
         current_frame = 0
         while True:
