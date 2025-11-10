@@ -65,6 +65,18 @@ class Display:
     def _format_train_time(self, train):
         if train is None:
             return ""
+            # xxx xxx xxx xxx xxx OK, I think I see what the issue is. In
+            # adafruit_portalbase it looks like setting some text equal to None
+            # can in some cases result in setting the label to None effectively
+            # deleting it.
+            # 
+            # Then when we try to go back in and set it again it ends up
+            # re-creating the label, causing issues because we need a well
+            # defined layering and the new label ends up being on top of the one
+            # we are drawing.
+            # 
+            # https://github.com/adafruit/Adafruit_CircuitPython_PortalBase/blob/25fc43dd67ae95a8e62173e90c3069502194873a/adafruit_portalbase/__init__.py#L285
+            # https://github.com/adafruit/Adafruit_CircuitPython_PortalBase/blob/25fc43dd67ae95a8e62173e90c3069502194873a/adafruit_portalbase/__init__.py#L312
         return self._time_conversion.relative_time_from_now(train.time)
 
     def _initialize_arrival_times(self):
