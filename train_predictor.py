@@ -195,6 +195,7 @@ class TrainPredictor:
     # xxx doc
     # xxx test
     def mark_train_arrived(self, train):
+        self._logger.debug(f"marking '{train.schedule_id}' as arrived")
         self._arrived_trains.add(train.schedule_id)
 
     def _fetch_schedules_and_predictions(self):
