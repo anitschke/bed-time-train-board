@@ -57,7 +57,7 @@ DATA_SOURCE="https://api-v3.mbta.com/schedules?" \
   "sort=arrival_time&" \
   "include=prediction&" \
   "fields[schedule]=arrival_time,departure_time,direction_id&" \
-  "fields[prediction]=arrival_time,departure_time,direction_id'" 
+  "fields[prediction]=arrival_time,departure_time,direction_id" 
 
 
 # xxx doc
