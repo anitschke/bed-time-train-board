@@ -4,11 +4,6 @@ from train_predictor import Direction
 import gc
 from buttons import button_down_depressed, button_up_depressed
 
-# xxx doc add a note somewhere, maybe in the README that this is a lot more
-# complicated than it needs to be. If you just want simple text update without
-# the animation or other logic I need for computing and caching go point back at
-# an earlier commit.
-
 NUM_TRAINS_TO_FETCH=3
 class ApplicationDependencies:
     def __init__(self, matrix_portal, train_predictor, time_conversion, display, nowFcn, logger):
@@ -42,7 +37,11 @@ class Application:
         self._try_method(self._sync_clock)
         self._try_method(self._display.initialize)
 
-    # xxx doc
+    # _try_method is passed a function to call along with arguments. It will
+    # call that function, if the function errors out then it will log the
+    # exception and then retry after a short delay. If after a few retries it
+    # still fails then it will display an error message on the board saying to
+    # contact me and attempt to fix the issue by doing a soft restart.
     def _try_method(self, method, positional_arguments = [], keyword_arguments = {}):
         attempt_count = 0
         max_attempt_count = 5
@@ -55,7 +54,6 @@ class Application:
                 return method(*positional_arguments, **keyword_arguments)
             except Exception as e:
                 self._logger.exception(e)
-                # xxx show some display on the board that there was an error or whatever
             time.sleep(retry_delay)
             self._logger.debug(f"making additional attempt {attempt_count}")
 
@@ -65,7 +63,7 @@ class Application:
             
 
     def _nightly_tasks(self):
-        # xxx doc
+        # Make sure we only run the nightly tasks once a night
         if time.monotonic() < self._last_nightly_tasks_run + 7200:
             return
         
@@ -79,7 +77,7 @@ class Application:
         self._train_predictor.clear_cache()
         gc.collect()
 
-    # xxx doc
+    # _sync_clock makes a call out to the adafruit ntp servers to update the time on the board.
     def _sync_clock(self):
         self._logger.debug("getting network time")
         self._matrix_portal.network.get_local_time(location="America/New_York")

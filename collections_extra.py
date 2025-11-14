@@ -1,9 +1,10 @@
 from collections import OrderedDict
 
 # LimitedSizeOrderedSet is a set that removes the oldest elements when we hit
-# the max length
-#
-# xxx doc
+# the max number of elements in the set.
+# 
+# If an element is re-added to the set then it will be pushed back to the front
+# of the order.
 class LimitedSizeOrderedSet:
     def __init__(self, max_size):
         self.max_size = max_size
@@ -37,7 +38,11 @@ class LimitedSizeOrderedSet:
     def __iter__(self):
         return iter(self._data)
     
-# xxx doc
+# LimitedSizeOrderedDict is a dict that removes the oldest elements when we hit
+# the max number of elements in the dict.
+# 
+# If an element is re-added to the dict then it will be pushed back to the front
+# of the order.
 class LimitedSizeOrderedDict:
     def __init__(self, max_size):
         self.max_size = max_size

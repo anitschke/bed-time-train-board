@@ -11,15 +11,15 @@ class DisplayMode:
     TRAIN = 2
     ERROR = 3
 
-# xxx doc
 class DisplayDependencies:
     def __init__(self,  matrix_portal, time_conversion, logger):
         self.matrix_portal = matrix_portal
         self.time_conversion = time_conversion
         self.logger = logger
 
-# xxx doc
-
+# Display is the class for interacting with the LED board do so things like
+# display the arrival times and the train animation when the train gets close
+# by.
 class Display:
     def __init__(self, dependencies : DisplayDependencies, text_scroll_delay, train_frame_duration):
         self._matrix_portal = dependencies.matrix_portal
@@ -36,7 +36,6 @@ class Display:
         self._error_text_index = None
 
     def initialize(self):
-        # xxx doc important we init train after arrival times so it shows up on top
         self._initialize_arrival_times()
         self._initialize_error()
         self._initialize_train()

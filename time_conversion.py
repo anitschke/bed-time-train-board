@@ -1,15 +1,14 @@
-# xxx doc
 class TimeConversionDependencies:
     def __init__(self, nowFcn):
         self.nowFcn = nowFcn
 
 
-# xxx doc
 class TimeConversion:
     def __init__(self, dependencies: TimeConversionDependencies):
         self._nowFcn = dependencies.nowFcn
 
-    # xxx doc
+    # relative_time_from_now converts a datetime into a human readable time
+    # relative to the current time. For example "1h 25min".
     def relative_time_from_now(self, train_time):
 
         # When we look at times we need to make sure we remove any time zone
