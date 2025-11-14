@@ -1,5 +1,6 @@
-from train_predictor import TrainPredictor, TrainPredictorDependencies, Direction
+from train_predictor import TrainPredictor, TrainPredictorDependencies, Direction, TrainWarning, TrainArrival
 from datetime import datetime, timedelta
+import time
 import json
 import os
 import unittest
@@ -8,8 +9,11 @@ import logging
 
 mock_logger = logging.getLogger("mock")
 
+def datetime_from_iso_format(iso):
+    return datetime.fromisoformat(iso).replace(tzinfo=None)
+
 def mock_now_func(timeOfNow):
-    return lambda : datetime.fromisoformat(timeOfNow).replace(tzinfo=None)
+    return lambda : datetime_from_iso_format(timeOfNow)
 
 def load_test_schedule_json(file):
     current_file_directory = os.path.dirname(os.path.abspath(__file__))
@@ -414,6 +418,8 @@ class Test_analyze_data(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].schedule_id, "schedule-Sept8Read-768347-704-FB-0275-S-10")
 
+        # Now when we mark the train as arrived we should filter it out of the
+        # results and show the next train.
         train_predictor.mark_train_arrived(result[0])
 
         result = train_predictor._analyze_data(count, data)
@@ -462,6 +468,92 @@ class Test_analyze_data(unittest.TestCase):
         self.assertEqual(result[0].schedule_id, schedule_id)
         self.assertEqual(result[0].time.isoformat(), "2025-10-22T23:04:53")
 
+class Test_train_passing_warning(unittest.TestCase):
+    # For simplicity in these tests we will always use a trainWarningSeconds of one minutes and set "now" = 2025-10-22T02:00:00
+    def create_predictor(self):
+        mock_now = mock_now_func('2025-10-22T02:00:00')
+        deps = TrainPredictorDependencies(network=None, datetime=datetime, timedelta=timedelta, nowFcn=mock_now, mbta_api_key=None, logger=mock_logger)
+        train_predictor = TrainPredictor(deps, trainWarningSeconds=60)
+        return train_predictor
+
+
+    def test_train_is_far(self):
+        # When a train is far away we should not return a warning for the train
+        train_predictor = self.create_predictor()
+        train = TrainArrival("mockId", datetime_from_iso_format("2025-10-22T03:00:00"), Direction.IN_BOUND, std_dev=timedelta(seconds = 10))
+        warning = train_predictor.train_passing_warning(train)
+        self.assertIsNone(warning)
+
+    def test_train_is_close(self):
+        # When a train is close we should return a warning for the train
+        train_predictor = self.create_predictor()
+
+        monotonic_now = time.monotonic()
+        train = TrainArrival("mockId", datetime_from_iso_format("2025-10-22T02:00:30"), Direction.IN_BOUND, std_dev=timedelta(seconds = 10))
+        warning = train_predictor.train_passing_warning(train)
+        self.assertIsNotNone(warning)
+        self.assertEqual(warning.direction, Direction.IN_BOUND)
+        exp_monotonic_time = monotonic_now+30+(3*10) # 30s from the fact that the train arrives 30s from now and (3*10)s for 3x standard deviation.
+        self.assertAlmostEqual(exp_monotonic_time, warning._end_monotonic, delta=1)
+
+    def test_either_side_of_std_calc(self):
+        # We should warn when the train arrival time is less than the current
+        # time plus the trainWarningSeconds plus 2 x standard deviation of
+        # arrival time.
+        #
+        # So in this test we will provide a train that arrives 1 second before
+        # the warning cutoff resulting in a warning. And a second test where we
+        # provide a train that arrives 1 second after the warning cutoff
+        # resulting in no warning.
+        train_predictor = self.create_predictor()
+
+        # now is 2025-10-22T02:00:00, trainWarningSeconds = 60, we are using std_dev fo 10.
+        # 
+        # So we expect the warning should be shown for an arrival time of 2025-10-22T02:01:20
+        train = TrainArrival("mockId", datetime_from_iso_format("2025-10-22T02:01:19"), Direction.IN_BOUND, std_dev=timedelta(seconds = 10))
+        warning = train_predictor.train_passing_warning(train)
+        self.assertIsNotNone(warning)
+
+        train = TrainArrival("mockId", datetime_from_iso_format("2025-10-22T02:01:21"), Direction.IN_BOUND, std_dev=timedelta(seconds = 10))
+        warning = train_predictor.train_passing_warning(train)
+        self.assertIsNone(warning)
+class Test_TrainArrival(unittest.TestCase):
+    def test_create_arrival(self):
+        arrival = TrainArrival("1234", "mock_time", Direction.IN_BOUND, 4)
+        self.assertEqual(arrival.schedule_id, "1234")
+        self.assertEqual(arrival.time, "mock_time")
+        self.assertEqual(arrival.direction, Direction.IN_BOUND)
+        self.assertEqual(arrival.std_dev, 4)
+
+    def test_sort_by_time(self):
+        trains = [
+            TrainArrival("0", datetime_from_iso_format("2025-10-22T05:00:00"), Direction.IN_BOUND, 0),
+            TrainArrival("1", datetime_from_iso_format("2025-10-22T01:00:00"), Direction.IN_BOUND, 0),
+            TrainArrival("2", datetime_from_iso_format("2025-10-22T03:00:00"), Direction.IN_BOUND, 0),
+            TrainArrival("3", datetime_from_iso_format("2025-10-22T02:00:00"), Direction.IN_BOUND, 0),
+            TrainArrival("4", datetime_from_iso_format("2025-10-22T04:00:00"), Direction.IN_BOUND, 0),
+        ]
+
+        trains.sort(key=TrainArrival.sort_by_time)
+
+        self.assertEqual(trains[0].schedule_id, "1")
+        self.assertEqual(trains[1].schedule_id, "3")
+        self.assertEqual(trains[2].schedule_id, "2")
+        self.assertEqual(trains[3].schedule_id, "4")
+        self.assertEqual(trains[4].schedule_id, "0")
+
+class Test_TrainWarning(unittest.TestCase):
+    def test_create_warning(self):
+        warning = TrainWarning(0, Direction.IN_BOUND)
+        self.assertEqual(warning.direction, Direction.IN_BOUND)
+
+    def test_should_stop(self):
+        warning = TrainWarning(time.monotonic() + 1, Direction.IN_BOUND)
+        self.assertFalse(warning.should_stop())
+
+        time.sleep(2)
+
+        self.assertTrue(warning.should_stop())
 
 if __name__ == '__main__':
     unittest.main()

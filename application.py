@@ -189,9 +189,10 @@ class Application:
                 # until the train finishes going by. No need to make a call out
                 # to the MBTA to update train predictions until the train
                 # finishes going by.
-                while not train_warning.shouldStop():
+                while not train_warning.should_stop():
                     self._try_method(self._display.render_train, [train_warning.direction])
                 self._try_method(self._train_predictor.mark_train_arrived, [self._trains[0]])
+                self._logger.info(f"train arrived '{self._trains[0].schedule_id}'")
             else:
                 self._try_method(self._display.render_arrival_times, [self._trains])
                 self._try_method(self._display.scroll_text)

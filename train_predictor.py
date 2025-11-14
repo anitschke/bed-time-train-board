@@ -114,8 +114,7 @@ class TrainWarning:
         self._end_monotonic = end_monotonic
         self.direction = direction
 
-    def shouldStop(self) -> bool:
-        # xxx test
+    def should_stop(self) -> bool:
         return time.monotonic() > self._end_monotonic
 
 class TrainPredictorDependencies:
@@ -179,7 +178,6 @@ class TrainPredictor:
         if train is None:
             return None
 
-        # xxx test
         # xxx doc talk about the statistics
         now = self._nowFcn()
         warning_start_time = train.time - self._trainWarningOffset -  (2 * train.std_dev)
@@ -224,7 +222,6 @@ class TrainPredictor:
             raise RuntimeError(f"Failed to fetch data from MBTA API. status_code: {response.status_code} response: {response.text}")
         return response.json()
     
-    # xxx test
     def _compute_train(self, schedule_id, schedule, prediction):
         self._logger.debug(f"computing train arrival time for '{schedule_id}' schedule={schedule}, prediction={prediction}")
 
