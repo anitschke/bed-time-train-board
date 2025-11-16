@@ -2,10 +2,7 @@
 
 The [Children's Museum of Franklin](https://www.childrensmuseumfranklin.org/) has a window overlooking the overlooks the MBTA Franklin commuter rail line. Whenever a train goes by kids will rush over to the window to watch it. This is a project for a train arrival board that shows when the next train will be arriving and plays an animation of a train when it is about to pass by.
 
-xxx add recording of display
-
-xxx you can press button to trigger train to go by. You must press and hold button until the train starts passing by.
-
+![train board gif](./train-board.gif)
 
 ## Hardware
 
