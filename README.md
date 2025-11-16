@@ -69,6 +69,15 @@ python -m unittest discover -p "*_test.py"
 
 Logs for the board are pushed to [adafruit.io](https://io.adafruit.com/anitschke/feeds/cmf-train-board-logging).
 
+### Debugging
+
+You can connect to the board and view logs / get into the Python REPL shell using:
+
+```
+screen /dev/ttyACM0
+```
+
+* Note that sometimes the device name has a different digit after disconnecting / reconnecting (ex `/dev/ttyACM1`).
 
 ### Implementation complexity
 
