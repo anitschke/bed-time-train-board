@@ -31,7 +31,6 @@ rsync -av --inplace \
     \
     $SCRIPT_DIR/application.py  \
     $SCRIPT_DIR/buttons.py  \
-    $SCRIPT_DIR/collections_extra.py  \
     $SCRIPT_DIR/display.py  \
     $SCRIPT_DIR/main.py  \
     $SCRIPT_DIR/time_conversion.py  \

@@ -2,14 +2,14 @@ import time
 import displayio
 import gc
 from train_predictor import Direction
+from adafruit_progressbar.progressbar import HorizontalProgressBar
 
-ARRIVAL_TIMES_FONT='fonts/6x10.bdf'
-ERROR_FONT='fonts/4x6.bdf'
+COUNTDOWN_TIMES_FONT='fonts/6x10.bdf'
 
 class DisplayMode:
-    ARRIVAL_TIMES = 1
+    NONE = 0
+    COUNTDOWN = 1
     TRAIN = 2
-    ERROR = 3
 
 class DisplayDependencies:
     def __init__(self,  matrix_portal, time_conversion, logger):
@@ -21,120 +21,41 @@ class DisplayDependencies:
 # display the arrival times and the train animation when the train gets close
 # by.
 class Display:
-    def __init__(self, dependencies : DisplayDependencies, text_scroll_delay, train_frame_duration):
+    def __init__(self, dependencies : DisplayDependencies, train_frame_duration):
         self._matrix_portal = dependencies.matrix_portal
         self._time_conversion = dependencies.time_conversion
         self._logger = dependencies.logger
 
         self._mode = None
-        self._text_scroll_delay = text_scroll_delay
         self._train_frame_duration = train_frame_duration
-        
-        self._title_text_index = None
-        self._arrival_time_indices = None
-
-        self._error_text_index = None
 
     def initialize(self):
-        self._initialize_arrival_times()
-        self._initialize_error()
         self._initialize_train()
+        self._initialize_countdown()
         gc.collect()
 
     def _set_mode(self, mode):
-        if mode == DisplayMode.ARRIVAL_TIMES:
-            self._tLogo.hidden = False
-            self._set_text_hidden(self._title_text_index, False)
-            self._set_text_hidden(self._arrival_time_indices[0], False)
-            self._set_text_hidden(self._arrival_time_indices[1], False)
-            self._set_text_hidden(self._arrival_time_indices[2], False)
-
-            self._set_text_hidden(self._error_text_index, True)
-
+        if mode == DisplayMode.NONE:
             self._train_sprite_group.hidden = True
+
+            self._countdown_progress_bar_group.hidden = True
+            self._set_text_hidden(self._countdown_time_index, True)
+        if mode == DisplayMode.COUNTDOWN:
+            self._train_sprite_group.hidden = True
+
+            self._countdown_progress_bar_group.hidden = False
+            self._set_text_hidden(self._countdown_time_index, False)
         if mode == DisplayMode.TRAIN:
-            self._tLogo.hidden = True
-            self._set_text_hidden(self._title_text_index, True)
-            self._set_text_hidden(self._arrival_time_indices[0], True)
-            self._set_text_hidden(self._arrival_time_indices[1], True)
-            self._set_text_hidden(self._arrival_time_indices[2], True)
-
-            self._set_text_hidden(self._error_text_index, True)
-
             self._train_sprite_group.hidden = False
-        if mode == DisplayMode.ERROR:
-            self._tLogo.hidden = True
-            self._set_text_hidden(self._title_text_index, True)
-            self._set_text_hidden(self._arrival_time_indices[0], True)
-            self._set_text_hidden(self._arrival_time_indices[1], True)
-            self._set_text_hidden(self._arrival_time_indices[2], True)
 
-            self._set_text_hidden(self._error_text_index, False)
+            self._countdown_progress_bar_group.hidden = True
+            self._set_text_hidden(self._countdown_time_index, True)
 
-            self._train_sprite_group.hidden = True
         self._mode = mode
 
     def _set_text_hidden(self, text_index:int, hidden:bool):
         self._matrix_portal.text_fields[text_index].get("label").hidden = hidden
 
-    def render_arrival_times(self, trains):
-        self._logger.debug("rendering arrival times")
-        self._set_mode(DisplayMode.ARRIVAL_TIMES)
-
-        assert(len(trains)== 3, "expecting three train objects to be provided to render_arrival_times")
-
-        times = [self._format_train_time(t) for t in trains]
-
-        self._matrix_portal.set_text(times[0], self._arrival_time_indices[0])
-        self._matrix_portal.set_text(times[1], self._arrival_time_indices[1])
-        self._matrix_portal.set_text(times[2], self._arrival_time_indices[2])
-
-    def _format_train_time(self, train):
-        if train is None:
-            # When we have no train we need to return a space character and NOT
-            # an empty string. This is to "trick" matrix_portal.set_text into
-            # keeping the text label around. Without this trick set_text will
-            # remove the label and add it back next time we render which can
-            # result in the label showing up incorrectly on top of other
-            # elements. See
-            # https://github.com/adafruit/Adafruit_CircuitPython_PortalBase/issues/117
-            return " "
-        return self._time_conversion.relative_time_from_now(train.time)
-
-    def _initialize_arrival_times(self):
-        self._logger.debug("initializing arrival times")
-        self._title_text_index = self._matrix_portal.add_text( text_font=ARRIVAL_TIMES_FONT, text_position=(15, 3), text="Children's Museum of Franklin", is_data=False, scrolling=True)
-        
-        self._arrival_time_indices = [
-            self._matrix_portal.add_text( text_font=ARRIVAL_TIMES_FONT, text_position=(16, 11), text="?min", is_data=False),
-            self._matrix_portal.add_text( text_font=ARRIVAL_TIMES_FONT, text_position=(16, 19), text="?min", is_data=False),
-            self._matrix_portal.add_text( text_font=ARRIVAL_TIMES_FONT, text_position=(16, 27), text="?min", is_data=False),
-        ]
-
-        # When we add the tLogo on the left side of the screen we want the
-        # scrolling "Children's Museum of Franklin" to scroll UNDER the T
-        # instead of on top of it. With displayio items added to a group last
-        # stack on TOP of other layers. So we need to add the tLogo AFTER the
-        # text so it stacks on top of the text. We also set the third color
-        # palette color as transparent so the text can scroll partly on top of
-        # the logo.
-        tLogo = displayio.OnDiskBitmap('/background.bmp')
-        palette = tLogo.pixel_shader
-        palette.make_transparent(3)
-        self._tLogo = displayio.TileGrid(
-                tLogo,
-                pixel_shader=palette,
-            )
-        self._matrix_portal.display.root_group.append(self._tLogo)
-
-        self._mode = DisplayMode.ARRIVAL_TIMES
-
-    def _initialize_error(self):
-        self._error_text_index  = self._matrix_portal.add_text(text_font=ERROR_FONT, text_position=(1, 15), text_wrap=17, text="ERROR Restarting in 1min. Contact Andrew.B.Nitschke@gmail.com")
-
-    def scroll_text(self):
-        self._matrix_portal.scroll_text(self._text_scroll_delay)
-    
     def _initialize_train(self):
         self._logger.debug("initializing train")
         WIDTH=64
@@ -153,6 +74,9 @@ class Display:
         self._matrix_portal.display.root_group.append(self._train_sprite_group)
 
         self._train_frame_count = int(bitmap.height / HEIGHT)
+
+    def render_none(self):
+        self._set_mode(DisplayMode.NONE)
 
     def render_train(self, direction):
         self._logger.debug("rendering train")
@@ -175,5 +99,41 @@ class Display:
             # sprite_group.
             self._train_sprite_group[0][0] = current_frame
 
-    def render_error(self):
-        self._set_mode(DisplayMode.ERROR)
+    def _initialize_countdown(self):
+        self._logger.debug("initializing countdown")
+        self._countdown_progress_bar = HorizontalProgressBar(
+            position=(0, 0),
+            size=(64, 15),
+            bar_color=0xFF0000,
+            outline_color=0x00FF00,
+            fill_color=0x0000FF,
+            min_value=0,
+            max_value=1,
+        )
+        self._countdown_progress_bar_group = displayio.Group()
+        self._matrix_portal.display.root_group.append(self._countdown_progress_bar_group)
+        self._countdown_progress_bar_group.append(self._countdown_progress_bar)
+
+        self._countdown_time_index = self._matrix_portal.add_text( text_font=COUNTDOWN_TIMES_FONT, text_position=(32, 24), text_anchor_point=(0.5, 0.5), text="?", is_data=False)
+
+    def render_countdown(self, start_time_seconds, end_time_seconds, current_time_seconds):
+        self._logger.debug("rendering countdown")
+        self._set_mode(DisplayMode.COUNTDOWN)
+
+        total_seconds = end_time_seconds-start_time_seconds
+        remaining_seconds = end_time_seconds-current_time_seconds
+        ratio = remaining_seconds / total_seconds
+
+        # self._countdown_progress_bar.value asserts if value is greater than 1.
+        if ratio > 1:
+            ratio = 1
+
+        self._countdown_progress_bar.value = ratio
+
+        display_time = self._time_conversion.format_relative_time_from_now(remaining_seconds)
+
+        # If we set it every cycle then the display jitters for some reason. So
+        # only update the value if it has actually changed.
+        if not self._matrix_portal.text_fields[self._countdown_time_index]["label"].text == display_time:
+            self._matrix_portal.set_text(display_time, self._countdown_time_index)
+
