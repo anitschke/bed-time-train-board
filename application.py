@@ -12,7 +12,7 @@ class ApplicationDependencies:
         self.logger = logger
 
 class Application:
-    def __init__(self, dependencies: ApplicationDependencies, countdown_seconds ):
+    def __init__(self, dependencies: ApplicationDependencies, countdown_seconds, train_render_count ):
         self._matrix_portal  = dependencies.matrix_portal 
         self._display = dependencies.display
         self._nowFcn = dependencies.nowFcn
@@ -20,6 +20,8 @@ class Application:
 
         self._last_nightly_tasks_run = time.monotonic()
         self._countdown_seconds = countdown_seconds
+
+        self._train_render_count = train_render_count
 
         self._countdown_end_time = None
         self._countdown_start_time = None
@@ -66,13 +68,19 @@ class Application:
 
             # Check if we need to play the train because countdown finished
             if now > self._countdown_end_time:
-                self._display.render_train(Direction.OUT_BOUND)
+                for _ in range(self._train_render_count):
+                    self._display.render_train(Direction.OUT_BOUND)
                 self._reset_countdown()
                 self._display.render_none()
                 continue
 
             # Display countdown
             self._display.render_countdown(self._countdown_start_time, self._countdown_end_time, now)
+            
+            # For some reason if we don't have any free cycles then the display
+            # won't update. So we need to add a short sleep to give some cycles
+            # for it to update the display.
+            time.sleep(0.1)
             
 
 

@@ -17,6 +17,6 @@ logger = logging_extra.newLogger(logging_extra.LoggerDependencies(matrix_portal)
 time_conversion = TimeConversion()
 display = Display(DisplayDependencies(matrix_portal, time_conversion, logger), train_frame_duration=0.08)
 
-app = Application(ApplicationDependencies(matrix_portal, display, datetime.now, logger), countdown_seconds=5*60)
+app = Application(ApplicationDependencies(matrix_portal, display, datetime.now, logger), countdown_seconds=5*60, train_render_count=5)
 
 app.run()

@@ -117,7 +117,6 @@ class Display:
         self._countdown_time_index = self._matrix_portal.add_text( text_font=COUNTDOWN_TIMES_FONT, text_position=(32, 24), text_anchor_point=(0.5, 0.5), text="?", is_data=False)
 
     def render_countdown(self, start_time_seconds, end_time_seconds, current_time_seconds):
-        self._logger.debug("rendering countdown")
         self._set_mode(DisplayMode.COUNTDOWN)
 
         total_seconds = end_time_seconds-start_time_seconds
