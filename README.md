@@ -29,7 +29,19 @@ After setting up CircuitPython we need to install the Adafruit python libraries 
 
 ### `settings.toml`
 
-A `settings.toml` must be created inside this directory containing secrets and API keys. It will be copied over to the device when `install.sh` is run in the next step. Currently this file can be totally empty since I am not actually connecting to the internet with this board at all.
+A `settings.toml` must be created inside this directory containing secrets and API keys. It will be copied over to the device when `install.sh` is run in the next step.
+
+* `CIRCUITPY_WIFI_SSID` and `CIRCUITPY_WIFI_PASSWORD` need to contain the wifi SSID and password so the board can connect to wifi
+* `CIRCUITPY_WEB_API_PORT` and `CIRCUITPY_WEB_API_PASSWORD` may be set to enable access to the board over wifi, this is generally not recommended for security reasons.
+* `ADAFRUIT_AIO_USERNAME` and `ADAFRUIT_AIO_KEY` are required so it can push logs to the adafruit.io log feed and connect to the adafruit.io NTP time server so it can fetch the current time. A free account can be created at io.adafruit.com .
+
+```toml
+CIRCUITPY_WIFI_SSID = "REDACTED"
+CIRCUITPY_WIFI_PASSWORD = "REDACTED"
+
+ADAFRUIT_AIO_USERNAME = "REDACTED"
+ADAFRUIT_AIO_KEY      = "REDACTED"
+```
 
 ### Install the program
 

@@ -1,4 +1,5 @@
 import time
+import gc
 from train_predictor import Direction
 from buttons import button_down_depressed, button_up_depressed
 from train_predictor import Direction
@@ -26,6 +27,8 @@ class Application:
         self._countdown_end_time = None
         self._countdown_start_time = None
 
+        self._last_nightly_tasks_run = time.monotonic()
+
     def run(self):
         self._startup()
         self._run_loop()
@@ -34,6 +37,26 @@ class Application:
         self._logger.info("starting train board")
         self._display.initialize()
         self._display.render_none()
+
+    def _nightly_tasks(self):
+        # Make sure we only run the nightly tasks once a night
+        if time.monotonic() < self._last_nightly_tasks_run + 7200:
+            return
+        
+        now = self._nowFcn()
+        if now.hour is not 3:
+            return
+
+        self._logger.debug("running nightly tasks")
+        self._last_nightly_tasks_run = time.monotonic()
+        self._try_method(self._sync_clock)
+        gc.collect()
+
+    # _sync_clock makes a call out to the adafruit ntp servers to update the time on the board.
+    def _sync_clock(self):
+        self._logger.debug("getting network time")
+        self._matrix_portal.network.get_local_time(location="America/New_York")
+        self._logger.debug(f"current time set to {self._nowFcn()}")
 
     def _reset_countdown(self):
         self._countdown_start_time = None
@@ -45,7 +68,10 @@ class Application:
             
     def _run_loop(self):
         while True:
-            # First look for user input from buttons.
+            # First run nightly tasks
+            self._nightly_tasks()
+
+            # Next look for user input from buttons.
             # 
             # Note ideally we would use something like hardware interrupts or
             # asyncio to monitor button presses but this adds a lot of

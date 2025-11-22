@@ -22,7 +22,8 @@ class LoggerDependencies:
     def __init__(self,  matrix_portal):
         self.matrix_portal = matrix_portal
 class LogLevels:
-    def __init__(self, print_handler):
+    def __init__(self, aio_handler, print_handler):
+        self.aio_handler = aio_handler
         self.print_handler = print_handler
 
 # newLogger creates a new logger that logs to the serial bus / stdout and to
@@ -40,15 +41,13 @@ def newLogger( dependencies: LoggerDependencies, log_levels: LogLevels):
     # log infrastructure will see that we don't have a handler at that lowest
     # level and will automatically log to a StreamHandler even if we don't want
     # that.
-    #
-    # logger_level = min(log_levels.print_handler)
-    #
-    # At the moment we only have one handler so just set it equal to the log
-    # level for that handler.
-    logger_level = log_levels.print_handler
+    logger_level = min(log_levels.aio_handler, log_levels.print_handler)
 
     logger = logging.getLogger('')
     logger.setLevel(logger_level)
+
+    aio_handler = AIOHandler(dependencies.matrix_portal, "bedtime-train-board-logging", log_levels.aio_handler)
+    logger.addHandler(aio_handler)
 
     stream_handler = logging.StreamHandler()
     stream_handler.setLevel(log_levels.print_handler)
@@ -56,3 +55,17 @@ def newLogger( dependencies: LoggerDependencies, log_levels: LogLevels):
 
     logger.debug("logging initialized")
     return logger
+
+# AIOHandler logs to adafruit.io so I can easily monitor the board to be alerted if there are
+# issues. 
+class AIOHandler(logging.Handler):
+    def __init__(self, matrix_portal, feed_name, level: int):
+        super().__init__(level)
+        self._feed_name = feed_name
+        self._matrix_portal = matrix_portal
+
+    def emit(self, record):
+        try:
+            self._matrix_portal.push_to_io(self._feed_name, self.format(record))
+        except Exception as e:
+            print(f"Failed to push logs to adafruit.io: ${e}")

@@ -11,7 +11,7 @@ from application import Application, ApplicationDependencies
 
 matrix_portal = MatrixPortal(status_neopixel=board.NEOPIXEL)
 
-log_levels = logging_extra.LogLevels(print_handler=logging_extra.DEBUG)
+log_levels = logging_extra.LogLevels(print_handler=logging_extra.DEBUG, aio_handler=logging_extra.INFO)
 logger = logging_extra.newLogger(logging_extra.LoggerDependencies(matrix_portal), log_levels)
 
 time_conversion = TimeConversion()
