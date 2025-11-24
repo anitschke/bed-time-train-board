@@ -3,6 +3,8 @@ import gc
 from train_predictor import Direction
 from buttons import button_down_depressed, button_up_depressed
 from train_predictor import Direction
+from adafruit_datetime import datetime
+
 
 NUM_TRAINS_TO_FETCH=3
 class ApplicationDependencies:
@@ -35,6 +37,7 @@ class Application:
 
     def _startup(self):
         self._logger.info("starting train board")
+        self._sync_clock()
         self._display.initialize()
         self._display.render_none()
 
@@ -49,7 +52,7 @@ class Application:
 
         self._logger.debug("running nightly tasks")
         self._last_nightly_tasks_run = time.monotonic()
-        self._try_method(self._sync_clock)
+        self._sync_clock()
         gc.collect()
 
     # _sync_clock makes a call out to the adafruit ntp servers to update the time on the board.
@@ -86,8 +89,14 @@ class Application:
                 self._start_countdown()
                 continue              
             
-            # No countdown, just keep checking buttons
+            # No countdown render the clock
             if self._countdown_end_time is None:
+                now = datetime.now()
+                self._display.render_clock(now)
+                # For some reason if we don't have any free cycles then the
+                # display won't update. So we need to add a short sleep to give
+                # some cycles for it to update the display.
+                time.sleep(0.1)
                 continue
 
             now = time.monotonic()
