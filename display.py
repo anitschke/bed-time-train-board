@@ -202,24 +202,16 @@ class Display:
     def render_clock(self, now: datetime):
         self._set_mode(DisplayMode.CLOCK)
 
-        self._analog_clock_second.angle = now.second / 60 * 360
-        self._analog_clock_minute.angle = now.minute / 60 * 360
-        self._analog_clock_hour.angle = now.hour / 12 * 360
-
-        hour = now.hour % 12
-        if hour < 10:
-            hourStr = f" {hour}"
-        else:
-            hourStr = f"{hour}"
-
-        if now.minute < 10:
-            minuteStr = f"0{now.minute}"
-        else:
-            minuteStr = f"{now.minute}"
+        hour_angle, minute_angle, second_angle = self._time_conversion.analog_clock_angles(
+            now.hour, now.minute, now.second
+        )
+        self._analog_clock_second.angle = second_angle
+        self._analog_clock_minute.angle = minute_angle
+        self._analog_clock_hour.angle = hour_angle
 
         # prevent flashing of numbers and only update if the time string has
         # actually changed.
-        timeStr = f"{hourStr}:{minuteStr}"
+        timeStr = self._time_conversion.format_clock_time(now.hour, now.minute)
         if not timeStr == self._timeStr:
             self._timeStr = timeStr
             self._matrix_portal.set_text(timeStr, self._digital_clock_index)
