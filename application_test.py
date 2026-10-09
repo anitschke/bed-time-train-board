@@ -95,12 +95,19 @@ class TestApplication(unittest.TestCase):
 
         # Advance time past countdown end (121s elapsed)
         current_mono = 1121.0
+        # train_render_count is 3, each iteration renders one train pass
         self.app.run_iteration()
-
-        # Verify countdown completed: train animation played for train_render_count (3 times)
-        self.assertEqual(len(self.mock_display.rendered_trains), 3)
-        self.assertIsNone(self.app._countdown_start_time)
+        self.assertEqual(len(self.mock_display.rendered_trains), 1)
+        self.assertEqual(self.app._remaining_trains, 2)
         self.assertIsNone(self.app._countdown_end_time)
+
+        self.app.run_iteration()
+        self.assertEqual(len(self.mock_display.rendered_trains), 2)
+        self.assertEqual(self.app._remaining_trains, 1)
+
+        self.app.run_iteration()
+        self.assertEqual(len(self.mock_display.rendered_trains), 3)
+        self.assertEqual(self.app._remaining_trains, 0)
         self.assertGreaterEqual(self.mock_display.rendered_none, 1)
 
         # Next iteration: reverts to rendering regular clock
@@ -114,15 +121,45 @@ class TestApplication(unittest.TestCase):
         self.app._handle_command(CancelCountdownCommand())
         self.assertIsNone(self.app._countdown_start_time)
         self.assertIsNone(self.app._countdown_end_time)
+        self.assertEqual(self.app._remaining_trains, 0)
         self.assertEqual(self.mock_display.rendered_none, 1)
 
     def test_handle_play_train_now_command(self):
         self.app._handle_command(StartCountdownCommand(duration_seconds=120))
         self.app._handle_command(PlayTrainNowCommand())
 
-        self.assertEqual(len(self.mock_display.rendered_trains), 3)
+        self.assertEqual(self.app._remaining_trains, 3)
         self.assertIsNone(self.app._countdown_end_time)
+
+        for i in range(1, 4):
+            self.app.run_iteration()
+            self.assertEqual(len(self.mock_display.rendered_trains), i)
+
+        self.assertEqual(self.app._remaining_trains, 0)
         self.assertEqual(self.mock_display.rendered_none, 1)
+
+    def test_cancel_train_while_playing(self):
+        # Trigger train animation (3 loops)
+        self.app._handle_command(PlayTrainNowCommand())
+        self.assertEqual(self.app._remaining_trains, 3)
+
+        # Play 1 loop of train
+        self.app.run_iteration()
+        self.assertEqual(len(self.mock_display.rendered_trains), 1)
+        self.assertEqual(self.app._remaining_trains, 2)
+
+        # Cancel while train is playing
+        self.mock_controller.commands = [CancelCountdownCommand()]
+        self.app.run_iteration()
+
+        # Remaining trains should be reset to 0, no more trains rendered, and reverted to clock
+        self.assertEqual(self.app._remaining_trains, 0)
+        self.assertEqual(len(self.mock_display.rendered_trains), 1)
+        self.assertEqual(len(self.mock_display.rendered_clocks), 1)
+
+        # Subsequent iteration continues rendering clock
+        self.app.run_iteration()
+        self.assertEqual(len(self.mock_display.rendered_clocks), 2)
 
     def test_poll_controllers(self):
         self.mock_controller.commands = [StartCountdownCommand(duration_seconds=600)]

@@ -27,6 +27,7 @@ class Application:
 
         self._countdown_start_time = None
         self._countdown_end_time = None
+        self._remaining_trains = 0
 
         self._last_nightly_tasks_run = self._monotonic_fcn()
 
@@ -62,6 +63,7 @@ class Application:
         gc.collect()
 
     def _start_countdown(self, seconds: int):
+        self._remaining_trains = 0
         self._countdown_start_time = self._monotonic_fcn()
         self._countdown_end_time = self._countdown_start_time + seconds
         self._logger.info(f"Countdown started: {seconds}s")
@@ -69,18 +71,24 @@ class Application:
     def _reset_countdown(self):
         self._countdown_start_time = None
         self._countdown_end_time = None
+        self._remaining_trains = 0
 
     def _cancel_countdown(self):
-        self._logger.info("Countdown cancelled")
+        self._logger.info("Countdown / train cancelled")
         self._reset_countdown()
         self._display.render_none()
 
-    def _play_train(self):
-        self._logger.info("Playing train")
-        for _ in range(self._train_render_count):
-            self._display.render_train(Direction.OUT_BOUND)
+    def _trigger_train(self):
+        self._logger.info("Triggering train animation")
         self._reset_countdown()
-        self._display.render_none()
+        self._remaining_trains = self._train_render_count
+
+    def _play_train_iteration(self):
+        self._display.render_train(Direction.OUT_BOUND)
+        self._remaining_trains -= 1
+        if self._remaining_trains <= 0:
+            self._remaining_trains = 0
+            self._display.render_none()
 
     def _handle_command(self, command):
         if isinstance(command, StartCountdownCommand):
@@ -89,7 +97,7 @@ class Application:
         elif isinstance(command, CancelCountdownCommand):
             self._cancel_countdown()
         elif isinstance(command, PlayTrainNowCommand):
-            self._play_train()
+            self._trigger_train()
         else:
             self._logger.warning(f"Unknown command: {command}")
 
@@ -106,21 +114,25 @@ class Application:
         # Poll controllers for user actions (buttons, web server, etc.)
         self._poll_controllers()
 
-        # If no countdown is active, render clock
-        if self._countdown_end_time is None:
-            now = self._nowFcn()
-            self._display.render_clock(now)
+        # If trains are actively playing, play one pass per iteration
+        if self._remaining_trains > 0:
+            self._play_train_iteration()
             return
 
-        now_mono = self._monotonic_fcn()
+        # If a countdown is active, check expiry or render countdown progress
+        if self._countdown_end_time is not None:
+            now_mono = self._monotonic_fcn()
+            if now_mono > self._countdown_end_time:
+                self._trigger_train()
+                self._play_train_iteration()
+                return
 
-        # If countdown expired, play train animation
-        if now_mono > self._countdown_end_time:
-            self._play_train()
+            self._display.render_countdown(self._countdown_start_time, self._countdown_end_time, now_mono)
             return
 
-        # Render countdown progress bar and time remaining
-        self._display.render_countdown(self._countdown_start_time, self._countdown_end_time, now_mono)
+        # If no countdown or train is active, render the clock
+        now = self._nowFcn()
+        self._display.render_clock(now)
 
     def _run_loop(self):
         while True:
