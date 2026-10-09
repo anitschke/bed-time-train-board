@@ -4,7 +4,7 @@ I recently built a [train arrival board](https://github.com/anitschke/childrens-
 When it is time for our daughter to go to bed we often times pretend that their is a train coming and we ride the train upstairs to bed. So this is a fork of [`anitschke/childrens-museum-franklin-train-board`](https://github.com/anitschke/childrens-museum-franklin-train-board) that is a simplified version of the train arrival board that I made for the Children's Museum of Franklin that shows a countdown timer and plays a train animation when it is time to go to bed.
 
 In addition to physical button controls on the board, it also hosts a built-in website accessible at `http://train.local` (or via its local IP address) for more advanced control, including:
-* Starting countdown timers using quick presets (2, 5, 10, or 16 minutes) or a customizable slider (1–30 minutes)
+* Starting countdown timers using quick presets (2, 5, 10, or 15 minutes) or a customizable slider (1–30 minutes)
 * Triggering the train animation immediately ("Play Train Now")
 * Canceling an active countdown and returning to the clock display
 
@@ -60,7 +60,7 @@ You can request that the train animation can play but holding down either the up
 
 ### Web Interface & Mobile Access
 
-The board hosts a local web server (`http://train.local` or directly via IP, e.g., `http://192.168.1.105/`) to start countdown timers (presets: 2, 5, 10, 16 minutes, or slider), play the train immediately, or cancel active countdowns.
+The board hosts a local web server (`http://train.local` or directly via IP, e.g., `http://192.168.1.105/`) to start countdown timers (presets: 2, 5, 10, 15 minutes, or slider), play the train immediately, or cancel active countdowns.
 
 #### Troubleshooting Android / Chrome (`ERR_TOO_MANY_RETRIES`)
 On modern Android devices (Android 14+), Google Chrome enforces Local Network Access permissions for private IP ranges (e.g. `192.168.x.x`). If Chrome lacks permission, navigating directly to the board's IP will immediately fail with `net_error: -36 (ERR_LOCAL_NETWORK_PERMISSION_MISSING)` and cause Chrome to loop until `ERR_TOO_MANY_RETRIES`.
