@@ -42,6 +42,10 @@ rsync -av --inplace \
     $SCRIPT_DIR/background.bmp  \
     $SCRIPT_DIR/train.bmp  \
     $SCRIPT_DIR/index.html  \
+    $SCRIPT_DIR/favicon.ico  \
+    $SCRIPT_DIR/manifest.json  \
+    $SCRIPT_DIR/icon-192.png  \
+    $SCRIPT_DIR/icon-512.png  \
     \
     $SCRIPT_DIR/fonts \
     \

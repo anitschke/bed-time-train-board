@@ -64,6 +64,14 @@ You can request that the train animation can play but holding down either the up
 
 The board hosts a local web server (`http://train.local` or directly via IP, e.g., `http://192.168.1.105/`) to start countdown timers (presets: 2, 5, 10, 15 minutes, or slider), play the train immediately, or cancel active countdowns.
 
+#### Installing as a Home Screen App (PWA)
+You can install the web interface as an app icon directly on your phone's home screen for quick one-tap access without browser address bars:
+1. Open `http://train.local` (or the board IP) in **Chrome** on Android.
+2. Tap the browser menu (**⋮** three vertical dots in the upper right).
+3. Select **Add to Home screen** (or **Install app**).
+4. Tap **Install** / **Add**.
+5. An app icon with the train emoji will appear on your phone's home screen and open the controls in standalone full-screen mode.
+
 #### Client Caching & Performance
 To minimize connection overhead on the single-threaded CircuitPython loop, `index.html` is served with `Cache-Control: public, max-age=86400` (24-hour cache).
 * **Performance Benefit:** Subsequent visits from the same device load instantly directly from the browser's disk/RAM cache without opening a TCP socket or waking the microcontroller.

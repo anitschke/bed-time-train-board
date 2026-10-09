@@ -1,6 +1,7 @@
 from commands import StartCountdownCommand, CancelCountdownCommand, PlayTrainNowCommand
 
 INDEX_FILE = "index.html"
+FAVICON_FILE = "favicon.ico"
 
 
 class WebServerController:
@@ -8,10 +9,11 @@ class WebServerController:
     
     Can be used with dependency injection for server/socketpool or test mocks.
     """
-    def __init__(self, server=None, logger=None, index_path=INDEX_FILE, mdns_server=None):
+    def __init__(self, server=None, logger=None, index_path=INDEX_FILE, favicon_path=FAVICON_FILE, mdns_server=None):
         self._server = server
         self._logger = logger
         self._index_path = index_path
+        self._favicon_path = favicon_path
         self._mdns_server = mdns_server
         self._pending_commands = []
 
@@ -51,8 +53,67 @@ class WebServerController:
 
         @server.route("/favicon.ico", GET)
         def favicon_handler(request: Request):
-            # Return empty response for browsers requesting favicon to avoid hanging retries
-            return Response(request, "", content_type="image/x-icon")
+            try:
+                with open(self._favicon_path, "rb") as f:
+                    favicon_bytes = f.read()
+                return Response(
+                    request,
+                    favicon_bytes,
+                    content_type="image/x-icon",
+                    headers={"Cache-Control": "public, max-age=86400"},
+                )
+            except Exception as e:
+                if self._logger:
+                    self._logger.error(f"Failed to read {self._favicon_path}: {e}")
+                return Response(request, "", content_type="image/x-icon")
+
+        @server.route("/manifest.json", GET)
+        def manifest_handler(request: Request):
+            try:
+                with open("manifest.json", "r") as f:
+                    content = f.read()
+                return Response(
+                    request,
+                    content,
+                    content_type="application/manifest+json",
+                    headers={"Cache-Control": "public, max-age=86400"},
+                )
+            except Exception as e:
+                if self._logger:
+                    self._logger.error(f"Failed to read manifest.json: {e}")
+                return Response(request, "{}", content_type="application/json")
+
+        @server.route("/icon-192.png", GET)
+        def icon_192_handler(request: Request):
+            try:
+                with open("icon-192.png", "rb") as f:
+                    data = f.read()
+                return Response(
+                    request,
+                    data,
+                    content_type="image/png",
+                    headers={"Cache-Control": "public, max-age=86400"},
+                )
+            except Exception as e:
+                if self._logger:
+                    self._logger.error(f"Failed to read icon-192.png: {e}")
+                return Response(request, "", content_type="image/png")
+
+        @server.route("/icon-512.png", GET)
+        def icon_512_handler(request: Request):
+            try:
+                with open("icon-512.png", "rb") as f:
+                    data = f.read()
+                return Response(
+                    request,
+                    data,
+                    content_type="image/png",
+                    headers={"Cache-Control": "public, max-age=86400"},
+                )
+            except Exception as e:
+                if self._logger:
+                    self._logger.error(f"Failed to read icon-512.png: {e}")
+                return Response(request, "", content_type="image/png")
 
         @server.route("/api/v1/timer", POST)
         def timer_handler(request: Request):

@@ -45,6 +45,10 @@ Its primary functions:
 ├── background.bmp              # Background graphic asset
 ├── train.bmp                   # Sprite sheet for train animation
 ├── index.html                  # HTML/JS web UI for web server
+├── favicon.ico                 # 32x32 Noto Emoji train favicon
+├── manifest.json               # Web App Manifest for Android PWA / Home Screen
+├── icon-192.png                # 192x192 Noto Emoji train icon for mobile home screen
+├── icon-512.png                # 512x512 Noto Emoji train icon for mobile splash screen
 └── testdata/                   # Test fixtures/data
 ```
 
@@ -61,6 +65,7 @@ Its primary functions:
 - **Button Polling:** Hardware interrupts and complex async loops are avoided to keep runtime overhead low. Buttons are pulled up (`Pull.UP`, active low) and polled synchronously in the loop.
 - **Android Chrome Local Network Access (`ERR_TOO_MANY_RETRIES`):** Android 14+ Chrome restricts web access to private IP addresses (`192.168.x.x`). If Chrome lacks the "Nearby devices" permission in Android OS Settings, requests abort internally with `net_error: -36 (ERR_LOCAL_NETWORK_PERMISSION_MISSING)` and loop into `ERR_TOO_MANY_RETRIES`. Grant Chrome the "Nearby devices" permission in Android App Settings (or use Firefox) to resolve this.
 - **Web Server HTTP Caching (`Cache-Control`):** `index.html` is served with `Cache-Control: public, max-age=86400` to prevent browsers from opening redundant TCP connections on subsequent page loads on the single-threaded CircuitPython loop. Trade-off: any modifications made to `index.html` will require client browsers to do a hard refresh (Ctrl+F5) or clear site data to invalidate cached HTML before the 24-hour TTL expires.
+- **Web App Manifest & Mobile PWA Icons:** To render crisp icons when installed to mobile home screens ("Add to Home screen"), the server hosts `manifest.json` along with palette-reduced PNG icons (`icon-192.png` and `icon-512.png`) and `apple-touch-icon`. These assets must be kept small (< 10 KB) to conserve flash and network transfer on the microcontroller.
 
 ---
 
