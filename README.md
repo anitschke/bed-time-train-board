@@ -8,6 +8,8 @@ In addition to physical button controls on the board, it also hosts a built-in w
 * Triggering the train animation immediately ("Play Train Now")
 * Canceling an active countdown and returning to the clock display
 
+![Web Interface Screenshot](websiteScreenshot.png)
+
 ## Hardware
 
 Adafruit makes it super easy to create an internet connected LED board like this. They sell a ESP32-S3 based board that integrates with HUB-75 based LED boards. Plug it in, write some python code, and just move it onto the board as if it was a USB drive.
