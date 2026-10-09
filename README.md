@@ -62,6 +62,11 @@ You can request that the train animation can play but holding down either the up
 
 The board hosts a local web server (`http://train.local` or directly via IP, e.g., `http://192.168.1.105/`) to start countdown timers (presets: 2, 5, 10, 15 minutes, or slider), play the train immediately, or cancel active countdowns.
 
+#### Client Caching & Performance
+To minimize connection overhead on the single-threaded CircuitPython loop, `index.html` is served with `Cache-Control: public, max-age=86400` (24-hour cache).
+* **Performance Benefit:** Subsequent visits from the same device load instantly directly from the browser's disk/RAM cache without opening a TCP socket or waking the microcontroller.
+* **Trade-off:** If `index.html` is updated on the board, clients will continue serving the cached version until the 24-hour TTL expires, unless the user performs a hard refresh (Ctrl+F5) or clears site data.
+
 #### Troubleshooting Android / Chrome (`ERR_TOO_MANY_RETRIES`)
 On modern Android devices (Android 14+), Google Chrome enforces Local Network Access permissions for private IP ranges (e.g. `192.168.x.x`). If Chrome lacks permission, navigating directly to the board's IP will immediately fail with `net_error: -36 (ERR_LOCAL_NETWORK_PERMISSION_MISSING)` and cause Chrome to loop until `ERR_TOO_MANY_RETRIES`.
 

@@ -33,7 +33,17 @@ class WebServerController:
             try:
                 with open(self._index_path, "r") as f:
                     html_content = f.read()
-                return Response(request, html_content, content_type="text/html")
+                # Set Cache-Control to allow clients to cache index.html for 24 hours (86400s).
+                # Microcontroller performance benefit: Avoids handling repeated HTTP requests
+                # and socket connections entirely on subsequent visits.
+                # Tradeoff: If index.html is modified, browser users must hard-refresh (Ctrl+F5)
+                # or clear browser cache to see UI updates immediately.
+                return Response(
+                    request,
+                    html_content,
+                    content_type="text/html",
+                    headers={"Cache-Control": "public, max-age=86400"},
+                )
             except Exception as e:
                 if self._logger:
                     self._logger.error(f"Failed to read {self._index_path}: {e}")
