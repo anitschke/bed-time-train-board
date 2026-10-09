@@ -54,9 +54,9 @@ class WebServerController:
             # Return empty response for browsers requesting favicon to avoid hanging retries
             return Response(request, "", content_type="image/x-icon")
 
-        @server.route("/api/timer", POST)
+        @server.route("/api/v1/timer", POST)
         def timer_handler(request: Request):
-            # Parse query params (e.g. /api/timer?seconds=300)
+            # Parse query params (e.g. /api/v1/timer?seconds=300)
             seconds = 300
             if "seconds" in request.query_params:
                 try:
@@ -69,14 +69,14 @@ class WebServerController:
             self._pending_commands.append(StartCountdownCommand(seconds))
             return Response(request, f"Started {seconds}s countdown", content_type="text/plain")
 
-        @server.route("/api/train", POST)
+        @server.route("/api/v1/train", POST)
         def train_handler(request: Request):
             if self._logger:
                 self._logger.info("webserver: play train now")
             self._pending_commands.append(PlayTrainNowCommand())
             return Response(request, "Playing train", content_type="text/plain")
 
-        @server.route("/api/cancel", POST)
+        @server.route("/api/v1/cancel", POST)
         def cancel_handler(request: Request):
             if self._logger:
                 self._logger.info("webserver: cancel countdown")

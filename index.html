@@ -68,8 +68,8 @@
     </div>
 
     <div class="card">
-        <button class="btn-train" onclick="sendAction('/api/train')">🚂 Play Train Now</button>
-        <button class="btn-cancel" onclick="sendAction('/api/cancel')">❌ Cancel</button>
+        <button class="btn-train" onclick="sendAction('/api/v1/train')">🚂 Play Train Now</button>
+        <button class="btn-cancel" onclick="sendAction('/api/v1/cancel')">❌ Cancel</button>
         <div class="notice" id="notice"></div>
     </div>
 
@@ -89,7 +89,7 @@
                 .catch(err => setNotice('Error: ' + err));
         }
         function startCountdown(seconds) {
-            sendAction('/api/timer?seconds=' + seconds);
+            sendAction('/api/v1/timer?seconds=' + seconds);
         }
         function startSlider() {
             const mins = document.getElementById('minsSlider').value;
