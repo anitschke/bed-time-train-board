@@ -27,8 +27,12 @@ Its primary functions:
 ├── .github/workflows/ci.yml    # GitHub Actions CI workflow (runs unit tests)
 ├── main.py                     # Entry point for CircuitPython execution
 ├── application.py              # Application lifecycle, main loop, state machine
+├── application_test.py         # CPython unit tests for application state machine
+├── commands.py                 # Command classes (StartCountdown, CancelCountdown, PlayTrainNow)
+├── buttons.py                  # ButtonController hardware button polling & edge detection
+├── buttons_test.py             # CPython unit tests for ButtonController
+├── webserver.py                # WebServerController (adafruit_httpserver, mDNS train.local, web UI)
 ├── display.py                  # Display driver: ClockHand, analog/digital clock, countdown, train sprite
-├── buttons.py                  # Hardware button state helpers
 ├── logging_extra.py            # Logger setup (stdout / StreamHandler & Adafruit IO feed push)
 ├── time_conversion.py          # Relative time formatting utilities
 ├── time_conversion_test.py     # CPython unit tests for time conversion
@@ -40,6 +44,7 @@ Its primary functions:
 ├── fonts/                      # BDF bitmap fonts (e.g. 4x6.bdf, 6x10.bdf)
 ├── background.bmp              # Background graphic asset
 ├── train.bmp                   # Sprite sheet for train animation
+├── index.html                  # HTML/JS web UI for web server
 └── testdata/                   # Test fixtures/data
 ```
 
@@ -54,6 +59,7 @@ Its primary functions:
 - **Display Refresh Constraints:** Noticeable screen flickering or jitter occurs if text fields or graphic objects are updated without their underlying values changing. Always guard display updates with dirty checks (e.g., compare formatted string before calling `_matrix_portal.set_text()`, compare angle before updating `ClockHand.angle`). A short `time.sleep(0.1)` is required in the main loop to yield cycles for display refreshing.
 - **File System Writes & Flash Wear:** Avoid logging to the local FAT filesystem (`/`). Local disk writes cause LED flickering due to power/bus contention and wear out the microcontroller's SPI flash. Logs should go to stdout (`StreamHandler`) and Adafruit IO (`AIOHandler`).
 - **Button Polling:** Hardware interrupts and complex async loops are avoided to keep runtime overhead low. Buttons are pulled up (`Pull.UP`, active low) and polled synchronously in the loop.
+- **Android Chrome Local Network Access (`ERR_TOO_MANY_RETRIES`):** Android 14+ Chrome restricts web access to private IP addresses (`192.168.x.x`). If Chrome lacks the "Nearby devices" permission in Android OS Settings, requests abort internally with `net_error: -36 (ERR_LOCAL_NETWORK_PERMISSION_MISSING)` and loop into `ERR_TOO_MANY_RETRIES`. Grant Chrome the "Nearby devices" permission in Android App Settings (or use Firefox) to resolve this.
 
 ---
 
@@ -110,5 +116,8 @@ When modifying or extending this codebase, adhere to the following rules:
 2. **Synchronize Documentation (`AGENTS.md` & `README.md`):**
    - **`AGENTS.md`**: Whenever architecture, coding conventions, deployment procedures, script usages, or critical constraints change, update this document to keep agent and developer context accurate.
    - **`README.md`**: Whenever user-facing features, hardware configurations, wiring, secrets, setup instructions, or dependencies change, update `README.md` accordingly.
-   - If files are added or removed from the repository, ensure both `AGENTS.md` (directory structure) and `install.sh` (rsync file list) are updated.
+
+3. **Synchronize `install.sh` when Adding/Removing Files:**
+   - Any runtime Python script, graphic asset, or resource file that is added or removed from the project **must be added or removed in `install.sh`** (the `rsync` file list). If this is not done, the file will not be copied to the CircuitPython board during deployment.
+   - Also update the directory layout tree in `AGENTS.md` to reflect the new or removed file.
 

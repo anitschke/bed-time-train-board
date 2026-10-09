@@ -1,35 +1,34 @@
 import time
 import gc
 from train_predictor import Direction
-from buttons import button_down_depressed, button_up_depressed
-from train_predictor import Direction
-from adafruit_datetime import datetime
+from commands import StartCountdownCommand, CancelCountdownCommand, PlayTrainNowCommand
 
-
-NUM_TRAINS_TO_FETCH=3
 class ApplicationDependencies:
-    def __init__(self, matrix_portal, display, nowFcn, logger):
-        self.matrix_portal  = matrix_portal 
+    def __init__(self, controllers: list, display, nowFcn, logger, sync_clock_fcn=None, monotonic_fcn=time.monotonic):
+        self.controllers = controllers
         self.display = display
         self.nowFcn = nowFcn
         self.logger = logger
+        self.sync_clock_fcn = sync_clock_fcn
+        self.monotonic_fcn = monotonic_fcn
+
 
 class Application:
-    def __init__(self, dependencies: ApplicationDependencies, countdown_seconds, train_render_count ):
-        self._matrix_portal  = dependencies.matrix_portal 
+    def __init__(self, dependencies: ApplicationDependencies, default_countdown_seconds=5*60, train_render_count=5):
+        self._controllers = dependencies.controllers
         self._display = dependencies.display
         self._nowFcn = dependencies.nowFcn
         self._logger = dependencies.logger
+        self._sync_clock_fcn = dependencies.sync_clock_fcn
+        self._monotonic_fcn = dependencies.monotonic_fcn
 
-        self._last_nightly_tasks_run = time.monotonic()
-        self._countdown_seconds = countdown_seconds
-
+        self._default_countdown_seconds = default_countdown_seconds
         self._train_render_count = train_render_count
 
-        self._countdown_end_time = None
         self._countdown_start_time = None
+        self._countdown_end_time = None
 
-        self._last_nightly_tasks_run = time.monotonic()
+        self._last_nightly_tasks_run = self._monotonic_fcn()
 
     def run(self):
         self._startup()
@@ -41,81 +40,93 @@ class Application:
         self._display.initialize()
         self._display.render_none()
 
+    def _sync_clock(self):
+        if self._sync_clock_fcn:
+            self._logger.debug("getting network time")
+            self._sync_clock_fcn()
+            self._logger.debug(f"current time set to {self._nowFcn()}")
+
     def _nightly_tasks(self):
         # Make sure we only run the nightly tasks once a night
-        if time.monotonic() < self._last_nightly_tasks_run + 7200:
+        now_mono = self._monotonic_fcn()
+        if now_mono < self._last_nightly_tasks_run + 7200:
             return
         
         now = self._nowFcn()
-        if now.hour is not 3:
+        if now.hour != 3:
             return
 
         self._logger.debug("running nightly tasks")
-        self._last_nightly_tasks_run = time.monotonic()
+        self._last_nightly_tasks_run = now_mono
         self._sync_clock()
         gc.collect()
 
-    # _sync_clock makes a call out to the adafruit ntp servers to update the time on the board.
-    def _sync_clock(self):
-        self._logger.debug("getting network time")
-        self._matrix_portal.network.get_local_time(location="America/New_York")
-        self._logger.debug(f"current time set to {self._nowFcn()}")
+    def _start_countdown(self, seconds: int):
+        self._countdown_start_time = self._monotonic_fcn()
+        self._countdown_end_time = self._countdown_start_time + seconds
+        self._logger.info(f"Countdown started: {seconds}s")
 
     def _reset_countdown(self):
         self._countdown_start_time = None
         self._countdown_end_time = None
 
-    def _start_countdown(self):
-        self._countdown_start_time = time.monotonic()
-        self._countdown_end_time = self._countdown_start_time + self._countdown_seconds
-            
+    def _cancel_countdown(self):
+        self._logger.info("Countdown cancelled")
+        self._reset_countdown()
+        self._display.render_none()
+
+    def _play_train(self):
+        self._logger.info("Playing train")
+        for _ in range(self._train_render_count):
+            self._display.render_train(Direction.OUT_BOUND)
+        self._reset_countdown()
+        self._display.render_none()
+
+    def _handle_command(self, command):
+        if isinstance(command, StartCountdownCommand):
+            duration = command.duration_seconds if command.duration_seconds else self._default_countdown_seconds
+            self._start_countdown(duration)
+        elif isinstance(command, CancelCountdownCommand):
+            self._cancel_countdown()
+        elif isinstance(command, PlayTrainNowCommand):
+            self._play_train()
+        else:
+            self._logger.warning(f"Unknown command: {command}")
+
+    def _poll_controllers(self):
+        for controller in self._controllers:
+            for command in controller.poll():
+                self._handle_command(command)
+
+    def run_iteration(self):
+        """Executes a single step of the event loop. Publicly accessible for unit testing."""
+        # First run nightly tasks
+        self._nightly_tasks()
+
+        # Poll controllers for user actions (buttons, web server, etc.)
+        self._poll_controllers()
+
+        # If no countdown is active, render clock
+        if self._countdown_end_time is None:
+            now = self._nowFcn()
+            self._display.render_clock(now)
+            return
+
+        now_mono = self._monotonic_fcn()
+
+        # If countdown expired, play train animation
+        if now_mono > self._countdown_end_time:
+            self._play_train()
+            return
+
+        # Render countdown progress bar and time remaining
+        self._display.render_countdown(self._countdown_start_time, self._countdown_end_time, now_mono)
+
     def _run_loop(self):
         while True:
-            # First run nightly tasks
-            self._nightly_tasks()
-
-            # Next look for user input from buttons.
-            # 
-            # Note ideally we would use something like hardware interrupts or
-            # asyncio to monitor button presses but this adds a lot of
-            # complexity to the code so instead we will just check the current
-            # state of the button at this point in time. This means that you
-            # must be pressing the button when we check for the button press or
-            # else the press won't be registered.
-            if button_up_depressed():
-                self._start_countdown()
-                continue
-            if button_down_depressed():
-                self._start_countdown()
-                continue              
-            
-            # No countdown render the clock
-            if self._countdown_end_time is None:
-                now = datetime.now()
-                self._display.render_clock(now)
-                # For some reason if we don't have any free cycles then the
-                # display won't update. So we need to add a short sleep to give
-                # some cycles for it to update the display.
-                time.sleep(0.1)
-                continue
-
-            now = time.monotonic()
-
-            # Check if we need to play the train because countdown finished
-            if now > self._countdown_end_time:
-                for _ in range(self._train_render_count):
-                    self._display.render_train(Direction.OUT_BOUND)
-                self._reset_countdown()
-                self._display.render_none()
-                continue
-
-            # Display countdown
-            self._display.render_countdown(self._countdown_start_time, self._countdown_end_time, now)
-            
+            self.run_iteration()
             # For some reason if we don't have any free cycles then the display
             # won't update. So we need to add a short sleep to give some cycles
             # for it to update the display.
             time.sleep(0.1)
-            
-
 

@@ -1,24 +1,30 @@
-import board
-from digitalio import DigitalInOut, Pull
+from commands import StartCountdownCommand
 
-# Configure buttons to pull up. This means that by default they will have a
-# value of True and when pressed will get a value of False. I tried configuring
-# them the other way around so we get a value of true when pressed but they must
-# be normally closed or something, because it didn't work, I don't really
-# understand.
-# 
-# To work around this we will just setup a lambda that tells us if it is
-# currently depressed.
-# 
-# Ideally we would use hardware interrupts or something to keep track of if it
-# has been pressed but it seems like that isn't possible. It seems like the
-# right way to do this would be to use async to allow monitoring the button
-# while we are still scrolling the text. But this adds a lot of complexity to
-# the code. So we will just make it so you need to be holding down the button
-# when we happen to check.
-button_down = DigitalInOut(board.BUTTON_DOWN)
-button_down.switch_to_input(pull=Pull.UP)
-button_down_depressed = lambda : not button_down.value
-button_up = DigitalInOut(board.BUTTON_UP)
-button_up.switch_to_input(pull=Pull.UP)
-button_up_depressed = lambda : not button_up.value
+class ButtonController:
+    """ButtonController polls hardware buttons and returns commands.
+    
+    Accepts button state probe functions (is_button_down, is_button_up) to enable
+    unit testing in CPython without digitalio/board.
+    """
+    def __init__(self, is_button_down, is_button_up, default_countdown_seconds=300):
+        self._is_button_down = is_button_down
+        self._is_button_up = is_button_up
+        self._default_countdown_seconds = default_countdown_seconds
+        self._was_down_pressed = False
+        self._was_up_pressed = False
+
+    def poll(self) -> list:
+        commands = []
+        is_down = self._is_button_down()
+        is_up = self._is_button_up()
+
+        # Trigger command on transition (edge detection)
+        down_edge = is_down and not self._was_down_pressed
+        up_edge = is_up and not self._was_up_pressed
+
+        if down_edge or up_edge:
+            commands.append(StartCountdownCommand(self._default_countdown_seconds))
+
+        self._was_down_pressed = is_down
+        self._was_up_pressed = is_up
+        return commands

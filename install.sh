@@ -31,6 +31,8 @@ rsync -av --inplace \
     \
     $SCRIPT_DIR/application.py  \
     $SCRIPT_DIR/buttons.py  \
+    $SCRIPT_DIR/commands.py  \
+    $SCRIPT_DIR/webserver.py  \
     $SCRIPT_DIR/display.py  \
     $SCRIPT_DIR/main.py  \
     $SCRIPT_DIR/time_conversion.py  \
@@ -39,6 +41,7 @@ rsync -av --inplace \
     \
     $SCRIPT_DIR/background.bmp  \
     $SCRIPT_DIR/train.bmp  \
+    $SCRIPT_DIR/index.html  \
     \
     $SCRIPT_DIR/fonts \
     \
